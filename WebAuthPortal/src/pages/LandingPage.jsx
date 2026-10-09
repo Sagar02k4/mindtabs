@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowRight, 
@@ -6,7 +5,6 @@ import {
   Zap, 
   ShieldCheck, 
   Download,
-  CheckCircle2
 } from 'lucide-react';
 
 const LandingPage = () => {

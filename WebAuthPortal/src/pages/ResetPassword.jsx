@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { Lock, Eye, EyeOff, CheckCircle2, ArrowRight, Zap } from 'lucide-react';
@@ -8,15 +8,14 @@ const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(() => (
+    supabase ? null : "Supabase is not configured for this deployment."
+  ));
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!supabase) {
-      setError("Supabase is not configured for this deployment.");
-      return;
-    }
+    if (!supabase) return;
     // Supabase automatically parses the #access_token from the URL hash 
     // and establishes a session. We can optionally check if we have a session.
     supabase.auth.getSession().then(({ data: { session } }) => {
