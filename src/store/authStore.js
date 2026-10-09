@@ -4,6 +4,9 @@ import { getFromStorage, setToStorage, removeFromStorage } from '../utils/storag
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 const AUTH_PORTAL_URL = import.meta.env.VITE_AUTH_PORTAL_URL || '';
+const AUTH_PORTAL_BASE_URL = AUTH_PORTAL_URL.replace(/\/reset-password\/?$/, '');
+const AUTH_CONFIRMATION_URL = AUTH_PORTAL_BASE_URL ? `${AUTH_PORTAL_BASE_URL}/` : '';
+const AUTH_RESET_URL = AUTH_PORTAL_BASE_URL ? `${AUTH_PORTAL_BASE_URL}/reset-password` : '';
 let authSubscription = null;
 
 const useAuthStore = create((set, get) => ({
@@ -197,6 +200,9 @@ const useAuthStore = create((set, get) => ({
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: AUTH_CONFIRMATION_URL || chrome.identity.getRedirectURL(),
+        },
       });
 
       if (error) throw error;
@@ -265,7 +271,7 @@ const useAuthStore = create((set, get) => ({
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: AUTH_PORTAL_URL || chrome.identity.getRedirectURL(),
+        redirectTo: AUTH_RESET_URL || chrome.identity.getRedirectURL(),
       });
 
       if (error) throw error;
