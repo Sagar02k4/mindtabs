@@ -49,7 +49,9 @@ Built with modern web technologies for blazing-fast performance:
    ```env
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_AUTH_PORTAL_URL=https://your-deployed-auth-portal.example.com/reset-password
    ```
+   Use the project URL and public anon key from Supabase Project Settings → API. Never commit `.env` files or service-role keys.
 4. Build the extension:
    ```bash
    npm run build
@@ -57,6 +59,14 @@ Built with modern web technologies for blazing-fast performance:
 5. Open Google Chrome and go to `chrome://extensions/`.
 6. Enable **Developer mode** in the top right corner.
 7. Click **Load unpacked** and select the `dist` folder generated inside the project directory.
+
+### Supabase setup
+
+Run `supabase_schema.sql` in the Supabase SQL Editor before testing cloud sync. It enables row-level security so users can only access their own tabs and reminders. Apply later schema changes as migrations in production.
+
+### Auth portal deployment
+
+`WebAuthPortal` is a separate Vite app. Configure its `.env` with the same Supabase URL and public anon key, run `npm run build` inside that folder, and deploy its `dist` folder. Set the extension's `VITE_AUTH_PORTAL_URL` to the deployed `/reset-password` route, then rebuild the extension.
 
 ## 💻 Development
 MindTabs uses Vite with Hot Module Replacement (HMR) specifically designed for Chrome Extensions via `@crxjs/vite-plugin`.
