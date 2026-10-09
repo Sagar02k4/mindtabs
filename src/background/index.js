@@ -157,15 +157,22 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
 
 // ─── Extension Install ──────────────────────────────────────────
 
-chrome.runtime.onInstalled.addListener((details) => {
+async function importOpenTabs() {
+  const openTabs = await chrome.tabs.query({ windowType: 'normal' });
+  await Promise.all(openTabs.map(trackTab));
+}
+
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     console.log('MindTabs installed successfully!');
   }
   chrome.alarms.create('sync-alarm', { periodInMinutes: 5 });
+  await importOpenTabs();
 });
 
-chrome.runtime.onStartup.addListener(() => {
+chrome.runtime.onStartup.addListener(async () => {
   chrome.alarms.create('sync-alarm', { periodInMinutes: 5 });
+  await importOpenTabs();
 });
 
 console.log('MindTabs background service worker loaded');
