@@ -52,10 +52,11 @@ export async function pushToCloud(userId) {
 
     // Delete cloud tabs that no longer exist locally
     const localTabIds = tabs.map(t => t.id);
-    const { data: cloudTabs } = await supabase
+    const { data: cloudTabs, error: cloudTabsError } = await supabase
       .from('tabs')
       .select('id')
       .eq('user_id', userId);
+    if (cloudTabsError) throw cloudTabsError;
 
     if (cloudTabs) {
       const toDelete = cloudTabs
@@ -63,8 +64,24 @@ export async function pushToCloud(userId) {
         .map(ct => ct.id);
 
       if (toDelete.length > 0) {
-        await supabase.from('tabs').delete().in('id', toDelete);
+        const { error } = await supabase.from('tabs').delete().in('id', toDelete);
+        if (error) throw error;
       }
+    }
+
+    const localReminderIds = reminders.map(r => r.id);
+    const { data: cloudReminders, error: cloudRemindersError } = await supabase
+      .from('reminders')
+      .select('id')
+      .eq('user_id', userId);
+    if (cloudRemindersError) throw cloudRemindersError;
+
+    const remindersToDelete = (cloudReminders || [])
+      .filter(cr => !localReminderIds.includes(cr.id))
+      .map(cr => cr.id);
+    if (remindersToDelete.length > 0) {
+      const { error } = await supabase.from('reminders').delete().in('id', remindersToDelete);
+      if (error) throw error;
     }
 
     await setToStorage(LAST_SYNC_KEY, Date.now());

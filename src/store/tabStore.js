@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage } from '../utils/storage';
 import { generateId, getUserIdFromAccessToken } from '../utils/helpers';
+import { FREE_LIMITS } from '../utils/constants';
 import { pushToCloud } from '../utils/syncService';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
@@ -34,6 +35,7 @@ const useTabStore = create((set, get) => ({
   searchQuery: '',
   activeTag: 'all',
   sortBy: 'newest',
+  actionError: null,
 
   // Initialize store from storage
   init: async () => {
@@ -50,6 +52,10 @@ const useTabStore = create((set, get) => ({
     // Check if tab with same URL already exists
     const existing = tabs.find(t => t.url === tabData.url);
     if (existing) return existing;
+    if (tabs.filter(t => !t.isArchived).length >= FREE_LIMITS.MAX_TABS) {
+      set({ actionError: `Free accounts can track up to ${FREE_LIMITS.MAX_TABS} active tabs.` });
+      return null;
+    }
 
     const newTab = {
       id: generateId(),
@@ -62,7 +68,7 @@ const useTabStore = create((set, get) => ({
       lastVisited: Date.now(),
     };
     const updated = [newTab, ...tabs];
-    set({ tabs: updated });
+    set({ tabs: updated, actionError: null });
     await saveTabs(updated);
     triggerSync();
     return newTab;
@@ -102,6 +108,10 @@ const useTabStore = create((set, get) => ({
     const { reminders } = get();
     // Remove existing reminder for this tab
     const filtered = reminders.filter(r => r.tabId !== tabId);
+    if (filtered.length >= FREE_LIMITS.MAX_REMINDERS) {
+      set({ actionError: `Free accounts can have up to ${FREE_LIMITS.MAX_REMINDERS} active reminders.` });
+      return null;
+    }
     const newReminder = {
       id: generateId(),
       tabId,
@@ -110,8 +120,9 @@ const useTabStore = create((set, get) => ({
       createdAt: Date.now(),
     };
     const updated = [...filtered, newReminder];
-    set({ reminders: updated });
+    set({ reminders: updated, actionError: null });
     await saveReminders(updated);
+    triggerSync();
 
     // Set Chrome alarm
     if (typeof chrome !== 'undefined' && chrome.alarms) {
@@ -139,6 +150,7 @@ const useTabStore = create((set, get) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   setActiveTag: (tag) => set({ activeTag: tag }),
   setSortBy: (sort) => set({ sortBy: sort }),
+  clearActionError: () => set({ actionError: null }),
 
   // Computed: get filtered tabs
   getFilteredTabs: () => {
