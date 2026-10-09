@@ -3,6 +3,8 @@ import { supabase, isSupabaseConfigured, SUPABASE_URL } from '../utils/supabase'
 import { getFromStorage, setToStorage, removeFromStorage } from '../utils/storage';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
+const AUTH_PORTAL_URL = import.meta.env.VITE_AUTH_PORTAL_URL || '';
+let authSubscription = null;
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -21,6 +23,26 @@ const useAuthStore = create((set, get) => ({
     }
 
     try {
+      if (!authSubscription && supabase) {
+        const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+          if (nextSession) {
+            setToStorage(AUTH_SESSION_KEY, {
+              access_token: nextSession.access_token,
+              refresh_token: nextSession.refresh_token,
+            });
+            set({
+              user: nextSession.user,
+              session: nextSession,
+              isAuthenticated: true,
+              error: null,
+            });
+          } else if (event === 'SIGNED_OUT') {
+            removeFromStorage(AUTH_SESSION_KEY);
+            set({ user: null, session: null, isAuthenticated: false });
+          }
+        });
+        authSubscription = data.subscription;
+      }
       const savedSession = await getFromStorage(AUTH_SESSION_KEY);
       if (savedSession) {
         // Try to refresh the session
@@ -243,7 +265,7 @@ const useAuthStore = create((set, get) => ({
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: chrome.identity.getRedirectURL(),
+        redirectTo: AUTH_PORTAL_URL || chrome.identity.getRedirectURL(),
       });
 
       if (error) throw error;
