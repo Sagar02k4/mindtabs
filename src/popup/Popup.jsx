@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  BookmarkPlus, Tag, Clock, LayoutDashboard, Trash2, 
+  BookmarkPlus, Tag, Clock, LayoutDashboard, Trash2, AlertCircle,
   ExternalLink, Bell, Check, Sparkles, ChevronDown, Cloud, User 
 } from 'lucide-react';
 import useTabStore from '../store/tabStore';
@@ -17,7 +17,7 @@ export default function Popup() {
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
   const [recentTabs, setRecentTabs] = useState([]);
-  const { tabs, reminders, init, addTab, updateTag, setReminder, removeTab, getStats } = useTabStore();
+  const { tabs, reminders, init, addTab, updateTag, setReminder, removeTab, getStats, actionError, clearActionError } = useTabStore();
 
   const { isAuthenticated, user, restoreSession } = useAuthStore();
 
@@ -109,6 +109,13 @@ export default function Popup() {
     <div className="flex flex-col h-full min-h-[520px]">
       {/* Header */}
       <div className="px-5 pt-5 pb-4">
+        {actionError && (
+          <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 p-3 text-xs text-amber-200">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span className="flex-1">{actionError}</span>
+            <button onClick={clearActionError} className="text-amber-100 underline">Dismiss</button>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-cyan 

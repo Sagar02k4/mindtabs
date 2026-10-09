@@ -17,7 +17,7 @@ import AuthPage from './components/AuthPage';
 
 function DashboardContent() {
   const navigate = useNavigate();
-  const { tabs, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery } = useTabStore();
+  const { tabs, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, actionError, clearActionError } = useTabStore();
   const { isAuthenticated, user, loading: authLoading, restoreSession } = useAuthStore();
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -70,6 +70,14 @@ function DashboardContent() {
       <Header onSignIn={() => navigate('/login')} />
 
       <main className="grow pb-16">
+        {actionError && (
+          <div className="max-w-7xl mx-auto px-6 pt-6">
+            <div role="alert" className="flex items-center justify-between gap-4 rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+              <span>{actionError}</span>
+              <button onClick={clearActionError} className="rounded-lg px-2 py-1 text-amber-100 hover:bg-amber-400/10" aria-label="Dismiss message">Dismiss</button>
+            </div>
+          </div>
+        )}
         <HeroDashboardWrapper 
           onRefresh={handleRefresh} 
           onClearAll={() => setShowDeleteAll(true)}

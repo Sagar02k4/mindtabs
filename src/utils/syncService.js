@@ -99,10 +99,14 @@ export async function pullFromCloud(userId) {
   if (!isSupabaseConfigured() || !userId) return { success: false };
 
   try {
-    const [{ data: cloudTabs }, { data: cloudReminders }] = await Promise.all([
+    const [tabsResult, remindersResult] = await Promise.all([
       supabase.from('tabs').select('*').eq('user_id', userId),
       supabase.from('reminders').select('*').eq('user_id', userId),
     ]);
+    if (tabsResult.error) throw tabsResult.error;
+    if (remindersResult.error) throw remindersResult.error;
+    const { data: cloudTabs } = tabsResult;
+    const { data: cloudReminders } = remindersResult;
 
     const localTabs = await getAllTabs();
     const localReminders = await getAllReminders();
