@@ -46,7 +46,7 @@ const LandingPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="landing-page min-h-screen bg-background overflow-x-hidden">
       {/* Navigation */}
       <nav className="w-full fixed top-0 bg-background/80 backdrop-blur-md z-50 border-b border-gray-200/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -66,7 +66,7 @@ const LandingPage = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+      <section className="pt-32 pb-24 px-6 max-w-7xl mx-auto relative">
         <motion.div 
           initial="hidden"
           animate="visible"
@@ -81,15 +81,15 @@ const LandingPage = () => {
             MindTabs v1.0 is Live
           </motion.div>
           
-          <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mb-6 leading-[1.1]">
-            Clear your tabs. <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+          <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mb-6 leading-[1.05] text-balance">
+            Turn tab chaos into <br/>
+            <span className="text-primary">
               Reclaim your focus.
             </span>
           </motion.h1>
           
-          <motion.p variants={itemVariants} className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto">
-            The ultimate productivity extension that transforms your chaotic browser into a beautifully organized, synced workspace.
+          <motion.p variants={itemVariants} className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+            Remember why you opened every tab, keep the useful ones close, and get your focus back without changing how you browse.
           </motion.p>
           
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -115,7 +115,7 @@ const LandingPage = () => {
           transition={{ delay: 0.6, duration: 0.8 }}
           className="mt-20 relative max-w-5xl mx-auto"
         >
-          <div className="aspect-[16/9] rounded-2xl bg-gradient-to-tr from-gray-100 to-white border border-gray-200 shadow-2xl overflow-hidden relative">
+          <div className="aspect-[16/9] rounded-3xl bg-gradient-to-tr from-gray-100 to-white border border-gray-200 shadow-2xl overflow-hidden relative ring-1 ring-black/5">
              <img src="/dashboard-mockup.png" alt="MindTabs Dashboard Preview" className="w-full h-full object-cover" />
           </div>
           
@@ -140,7 +140,7 @@ const LandingPage = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="p-8 rounded-2xl bg-background border border-gray-100 hover:shadow-xl hover:shadow-primary/5 transition-all group"
+                className="p-8 rounded-2xl bg-background border border-gray-100 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 group"
               >
                 <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   {feature.icon}
