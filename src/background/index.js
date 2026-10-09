@@ -1,4 +1,4 @@
-import { shouldExcludeUrl, generateId } from '../utils/helpers';
+import { shouldExcludeUrl, generateId, getUserIdFromAccessToken } from '../utils/helpers';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage } from '../utils/storage';
 import { fullSync } from '../utils/syncService';
 import { isSupabaseConfigured } from '../utils/supabase';
@@ -72,9 +72,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const session = await getFromStorage(AUTH_SESSION_KEY);
     if (session) {
       try {
-        const payload = JSON.parse(atob(session.access_token.split('.')[1]));
-        if (payload?.sub) {
-          await fullSync(payload.sub);
+        const userId = getUserIdFromAccessToken(session.access_token);
+        if (userId) {
+          await fullSync(userId);
           console.log('Periodic sync completed');
         }
       } catch (err) {

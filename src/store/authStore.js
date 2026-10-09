@@ -212,7 +212,9 @@ const useAuthStore = create((set, get) => ({
     set({ loading: true });
 
     try {
-      await supabase.auth.signOut();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
     } catch (err) {
       console.error('Sign out error:', err);
     }

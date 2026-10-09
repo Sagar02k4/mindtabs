@@ -64,6 +64,18 @@ export function generateId() {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
+export function getUserIdFromAccessToken(accessToken) {
+  try {
+    const payload = accessToken?.split('.')[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - base64.length % 4) % 4), '=');
+    return JSON.parse(atob(padded))?.sub || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Truncate text to a max length
  */

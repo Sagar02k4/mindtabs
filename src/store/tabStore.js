@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage } from '../utils/storage';
-import { generateId } from '../utils/helpers';
+import { generateId, getUserIdFromAccessToken } from '../utils/helpers';
 import { pushToCloud } from '../utils/syncService';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
@@ -17,9 +17,9 @@ function triggerSync() {
       const session = await getFromStorage(AUTH_SESSION_KEY);
       if (!session) return;
       // Decode user ID from the access token (JWT payload)
-      const payload = JSON.parse(atob(session.access_token.split('.')[1]));
-      if (payload?.sub) {
-        await pushToCloud(payload.sub);
+      const userId = getUserIdFromAccessToken(session.access_token);
+      if (userId) {
+        await pushToCloud(userId);
       }
     } catch (err) {
       console.warn('Sync trigger failed:', err);

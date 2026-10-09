@@ -13,6 +13,10 @@ const ResetPassword = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!supabase) {
+      setError("Supabase is not configured for this deployment.");
+      return;
+    }
     // Supabase automatically parses the #access_token from the URL hash 
     // and establishes a session. We can optionally check if we have a session.
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -24,6 +28,7 @@ const ResetPassword = () => {
 
   const handleReset = async (e) => {
     e.preventDefault();
+    if (!supabase) return;
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
