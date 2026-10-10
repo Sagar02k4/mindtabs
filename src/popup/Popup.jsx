@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   BookmarkPlus, Tag, Clock, LayoutDashboard, Trash2, AlertCircle,
   ExternalLink, Bell, Check, Sparkles, ChevronDown, Cloud, User 
@@ -17,6 +17,7 @@ export default function Popup() {
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
   const [recentTabs, setRecentTabs] = useState([]);
+  const menuRootRef = useRef(null);
   const { tabs, reminders, init, addTab, updateTag, setReminder, removeTab, getStats, actionError, clearActionError } = useTabStore();
 
   const { isAuthenticated, user, restoreSession } = useAuthStore();
@@ -44,6 +45,23 @@ export default function Popup() {
     const sorted = [...tabs].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
     setRecentTabs(sorted);
   }, [tabs]);
+
+  // Close action menus when the user clicks anywhere outside the current-tab
+  // controls. This keeps the popup predictable and prevents menus obscuring
+  // the recent-tab list.
+  useEffect(() => {
+    if (!showTagMenu && !showReminderMenu) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!menuRootRef.current?.contains(event.target)) {
+        setShowTagMenu(false);
+        setShowReminderMenu(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [showTagMenu, showReminderMenu]);
 
   const currentTrackedTab = currentTab ? tabs.find(t => t.url === currentTab.url) : null;
   const stats = getStats();
@@ -159,7 +177,7 @@ export default function Popup() {
 
       {/* Current Tab Section */}
       {currentTab && (
-        <div className={`px-5 pb-4 relative ${showTagMenu || showReminderMenu ? 'z-50' : 'z-10'}`}>
+        <div ref={menuRootRef} className={`px-5 pb-4 relative ${showTagMenu || showReminderMenu ? 'z-50' : 'z-10'}`}>
           <div className="glass-card rounded-xl p-4">
             <div className="flex items-start gap-3 mb-3">
               <img 
@@ -200,7 +218,8 @@ export default function Popup() {
 
                 {/* Tag dropdown */}
                 {showTagMenu && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-50 glass rounded-xl p-2 
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl p-2 
+                                bg-surface-900 border border-surface-700/80 shadow-2xl shadow-black/50
                                 animate-slide-down shadow-xl shadow-black/30">
                     {TAG_OPTIONS.map((option) => (
                       <button
@@ -234,7 +253,8 @@ export default function Popup() {
 
                 {/* Reminder dropdown */}
                 {showReminderMenu && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-50 glass rounded-xl p-2 
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-xl p-2 
+                                bg-surface-900 border border-surface-700/80 shadow-2xl shadow-black/50
                                 animate-slide-down shadow-xl shadow-black/30">
                     {REMINDER_PRESETS.map((preset) => (
                       <button
