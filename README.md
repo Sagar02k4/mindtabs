@@ -60,13 +60,26 @@ Built with modern web technologies for blazing-fast performance:
 6. Enable **Developer mode** in the top right corner.
 7. Click **Load unpacked** and select the `dist` folder generated inside the project directory.
 
+### Option 2: Install a GitHub Release ZIP
+
+For users who do not want to clone the repository:
+
+1. Open the repository's **Releases** page and download the latest extension ZIP.
+2. Extract the ZIP to a permanent folder. Do not select the ZIP file itself.
+3. Open `brave://extensions/` or `chrome://extensions/`.
+4. Enable **Developer mode**.
+5. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
+6. Pin MindTabs from the browser's Extensions menu.
+
+The GitHub Release ZIP is a manually installed development-style distribution. Users must keep Developer mode enabled, and the extension ID can differ between installations. A release ZIP must never contain `.env` files, SMTP credentials, Supabase service-role keys, private signing keys, or access/refresh tokens.
+
 ### Supabase setup
 
 Run `supabase_schema.sql` in the Supabase SQL Editor before testing cloud sync. It enables row-level security so users can only access their own tabs and reminders. Apply later schema changes as migrations in production.
 
 ### Auth portal deployment
 
-`WebAuthPortal` is a separate Vite app. Configure its `.env` with the same Supabase URL and public anon key, run `npm run build` inside that folder, and deploy its `dist` folder. Set the extension's `VITE_AUTH_PORTAL_URL` to the deployed `/reset-password` route, then rebuild the extension.
+`WebAuthPortal` is a separate Vite app. Configure its `.env` with the same Supabase URL and public anon key, run `npm run build` inside that folder, and deploy its `dist` folder. Set the extension's `VITE_AUTH_PORTAL_URL` to the deployed portal origin, then rebuild the extension.
 
 ## 💻 Development
 MindTabs uses Vite with Hot Module Replacement (HMR) specifically designed for Chrome Extensions via `@crxjs/vite-plugin`.
