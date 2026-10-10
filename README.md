@@ -81,6 +81,39 @@ Run `supabase_schema.sql` in the Supabase SQL Editor before testing cloud sync. 
 
 `WebAuthPortal` is a separate Vite app. Configure its `.env` with the same Supabase URL and public anon key, run `npm run build` inside that folder, and deploy its `dist` folder. Set the extension's `VITE_AUTH_PORTAL_URL` to the deployed portal origin, then rebuild the extension.
 
+### Authentication troubleshooting
+
+#### Confirmation email is not visible
+
+Check Spam, Promotions, and All Mail. During testing, messages from a new sender can be filtered even when delivery succeeds. In Supabase, check **Authentication → Logs**. In Brevo, check **Transactional → Logs** to confirm whether Supabase handed the message to Brevo.
+
+#### Confirmation link opens the web portal
+
+This is the expected current flow. The confirmation link verifies the account in the deployed WebAuthPortal. Return to the extension and sign in with the verified email and password. The portal and extension use different browser origins, so the portal session is not automatically shared with the extension.
+
+#### Supabase URL configuration
+
+For a deployed portal, configure the Supabase Auth URL settings with the portal origin as the **Site URL**, for example:
+
+```text
+https://mindtabs.vercel.app
+```
+
+Allow the portal root and password reset route in the redirect URL list:
+
+```text
+https://mindtabs.vercel.app/
+https://mindtabs.vercel.app/reset-password
+```
+
+#### Brevo SMTP delivery errors
+
+Use the SMTP login and SMTP key shown by Brevo, not the normal Brevo account password. The sender email must be verified in Brevo and must exactly match the sender configured in Supabase. If signup returns a server error, inspect the failed signup response in the browser Network panel and the matching Supabase Auth log.
+
+#### Security reminders
+
+Never share or commit Supabase access tokens, refresh tokens, service-role keys, Brevo SMTP keys, or `.env` files. The frontend may use the public Supabase anon key, but server credentials must remain private.
+
 ## 💻 Development
 MindTabs uses Vite with Hot Module Replacement (HMR) specifically designed for Chrome Extensions via `@crxjs/vite-plugin`.
 
