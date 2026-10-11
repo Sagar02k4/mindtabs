@@ -46,12 +46,12 @@ export function HeroDashboardWrapper({ children, onRefresh, onClearAll, tabsCoun
 				</p>
 
 				<div className="fade-in slide-in-from-bottom-10 flex w-fit animate-in items-center justify-start gap-3 fill-mode-backwards pt-2 delay-200 duration-500 ease-out">
-					<Button variant="outline" onClick={onRefresh}>
+					<Button type="button" variant="outline" aria-label="Refresh saved tabs" onClick={onRefresh}>
 						<RefreshCw className="size-4 mr-2" />{" "}
 						Refresh
 					</Button>
                     {tabsCount > 0 && (
-                        <Button variant="destructive" onClick={onClearAll}>
+                        <Button type="button" variant="destructive" aria-label="Delete all saved tabs and reminders" onClick={onClearAll}>
                             <Trash2 className="size-4 mr-2" />{" "}
                             Clear All
                         </Button>
