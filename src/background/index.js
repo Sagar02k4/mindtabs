@@ -59,17 +59,27 @@ async function trackTab(tab) {
   await saveTabs(tabs);
 }
 
+// Chrome can emit several update events for one navigation. Serialize reads and
+// writes so concurrent events cannot append duplicate records.
+let trackingQueue = Promise.resolve();
+function queueTrackTab(tab) {
+  trackingQueue = trackingQueue
+    .then(() => trackTab(tab))
+    .catch((error) => console.error('MindTabs tab tracking failed:', error));
+  return trackingQueue;
+}
+
 // Listen for tab updates (when URL changes or page finishes loading)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    trackTab(tab);
+    queueTrackTab(tab);
   }
 });
 
 // Listen for new tabs
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.url && tab.url !== 'chrome://newtab/') {
-    trackTab(tab);
+    queueTrackTab(tab);
   }
 });
 
@@ -188,7 +198,7 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
 
 async function importOpenTabs() {
   const openTabs = await chrome.tabs.query({ windowType: 'normal' });
-  await Promise.all(openTabs.map(trackTab));
+  await Promise.all(openTabs.map(queueTrackTab));
 }
 
 chrome.runtime.onInstalled.addListener(async (details) => {
@@ -212,14 +222,14 @@ chrome.runtime.onStartup.addListener(async () => {
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId === 'mindtabs-save-page' && tab) await trackTab(tab);
+  if (info.menuItemId === 'mindtabs-save-page' && tab) await queueTrackTab(tab);
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === 'open-dashboard') chrome.runtime.openOptionsPage();
   if (command === 'save-current-tab') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) await trackTab(tab);
+    if (tab) await queueTrackTab(tab);
   }
 });
 
