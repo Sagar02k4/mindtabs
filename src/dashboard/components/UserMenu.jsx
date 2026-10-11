@@ -49,6 +49,9 @@ export default function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
+        aria-label={`Account menu for ${userEmail}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
         className="flex items-center gap-2 px-3 py-2 rounded-xl glass-card transition-all duration-200"
       >
         {/* Avatar */}
