@@ -145,8 +145,12 @@ export function parseCsvBackup(csv) {
  */
 export function getFaviconUrl(url) {
   try {
-    const u = new URL(url);
-    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
+    if (!isSafePageUrl(url)) return null;
+    // Keep missing-favicon rendering local; sending hostnames to a third-party
+    // favicon proxy would disclose the user's browsing metadata.
+    return typeof chrome !== 'undefined' && chrome.runtime?.getURL
+      ? chrome.runtime.getURL('icons/icon16.png')
+      : '/icons/icon16.png';
   } catch {
     return null;
   }

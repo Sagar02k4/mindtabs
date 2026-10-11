@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup } from '../src/utils/helpers.js';
+import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
@@ -32,6 +32,11 @@ test('normalizeUrl strips credential-like query parameters but keeps ordinary fi
 test('safe page validation rejects executable URL schemes', () => {
   assert.equal(isSafePageUrl('javascript:alert(1)'), false);
   assert.equal(isSafePageUrl('https://example.com/page'), true);
+});
+
+test('favicon fallback does not disclose the tracked hostname', () => {
+  assert.equal(getFaviconUrl('https://private.example/account'), '/icons/icon16.png');
+  assert.equal(getFaviconUrl('javascript:alert(1)'), null);
 });
 
 test('backup validation removes unsafe and orphaned records', () => {
