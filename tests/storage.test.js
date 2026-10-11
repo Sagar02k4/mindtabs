@@ -22,3 +22,22 @@ test('local storage write failures propagate to callers', async () => {
   await assert.rejects(() => module.setToStorage('mindtabs_test', { value: true }), /quota exceeded/);
   delete globalThis.localStorage;
 });
+
+test('multi-key local saves roll back when the second write fails', async () => {
+  const values = new Map([['mindtabs_tabs', 'old-tabs'], ['mindtabs_reminders', 'old-reminders']]);
+  let writes = 0;
+  globalThis.localStorage = {
+    getItem(key) { return values.get(key) ?? null; },
+    setItem(key, value) {
+      writes += 1;
+      if (writes === 2) throw new Error('quota exceeded');
+      values.set(key, value);
+    },
+    removeItem(key) { values.delete(key); },
+  };
+  const module = await import(`../src/utils/storage.js?rollback-test=${Date.now()}`);
+  await assert.rejects(() => module.saveData([{ id: 'new' }], [{ id: 'new-reminder' }]), /quota exceeded/);
+  assert.equal(values.get('mindtabs_tabs'), 'old-tabs');
+  assert.equal(values.get('mindtabs_reminders'), 'old-reminders');
+  delete globalThis.localStorage;
+});

@@ -121,10 +121,20 @@ export async function saveData(tabs, reminders) {
       });
     });
   }
+  const previousTabs = localStorage.getItem(STORAGE_KEYS.TABS);
+  const previousReminders = localStorage.getItem(STORAGE_KEYS.REMINDERS);
   try {
     localStorage.setItem(STORAGE_KEYS.TABS, JSON.stringify(tabs));
     localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
   } catch (error) {
+    try {
+      if (previousTabs === null) localStorage.removeItem(STORAGE_KEYS.TABS);
+      else localStorage.setItem(STORAGE_KEYS.TABS, previousTabs);
+      if (previousReminders === null) localStorage.removeItem(STORAGE_KEYS.REMINDERS);
+      else localStorage.setItem(STORAGE_KEYS.REMINDERS, previousReminders);
+    } catch (rollbackError) {
+      console.error('Could not roll back local MindTabs data:', rollbackError);
+    }
     throw new Error(`Could not save MindTabs data: ${error.message}`);
   }
 }
