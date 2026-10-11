@@ -28,7 +28,7 @@ function DashboardContent() {
   const [syncMessage, setSyncMessage] = useState('');
   const [selected, setSelected] = useState(new Set());
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({ tracking: false, notifications: true, onboardingComplete: false, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
+  const [settings, setSettings] = useState({ theme: 'dark', tracking: false, notifications: true, onboardingComplete: false, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const pageSize = 20;
   const filteredTabs = getFilteredTabs();
