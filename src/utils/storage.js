@@ -13,8 +13,12 @@ const isExtension = typeof chrome !== 'undefined' && chrome.storage;
 
 export async function getFromStorage(key) {
   if (isExtension) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       chrome.storage.local.get([key], (result) => {
+        if (chrome.runtime?.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
         resolve(result[key] ?? null);
       });
     });
@@ -29,8 +33,11 @@ export async function getFromStorage(key) {
 
 export async function setToStorage(key, value) {
   if (isExtension) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ [key]: value }, () => resolve());
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [key]: value }, () => {
+        if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve();
+      });
     });
   }
   try {
@@ -42,8 +49,11 @@ export async function setToStorage(key, value) {
 
 export async function removeFromStorage(key) {
   if (isExtension) {
-    return new Promise((resolve) => {
-      chrome.storage.local.remove([key], resolve);
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.remove([key], () => {
+        if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve();
+      });
     });
   }
   localStorage.removeItem(key);
@@ -51,8 +61,11 @@ export async function removeFromStorage(key) {
 
 export async function clearAllStorage() {
   if (isExtension) {
-    return new Promise((resolve) => {
-      chrome.storage.local.clear(resolve);
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.clear(() => {
+        if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve();
+      });
     });
   }
   localStorage.clear();
