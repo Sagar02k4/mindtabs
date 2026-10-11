@@ -1,8 +1,8 @@
-import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants';
-import { normalizeSettings } from './settings';
-import { normalizeWorkspaces } from './workspaces';
-import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl, compactTabsByUrl } from './helpers';
-export { normalizeSettings } from './settings';
+import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants.js';
+import { normalizeSettings } from './settings.js';
+import { normalizeWorkspaces } from './workspaces.js';
+import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl, compactTabsByUrl, generateId } from './helpers.js';
+export { normalizeSettings } from './settings.js';
 
 /**
  * Chrome storage wrapper with async/await support.
@@ -62,7 +62,9 @@ export async function removeFromStorage(key) {
 export async function clearAllStorage() {
   if (isExtension) {
     return new Promise((resolve, reject) => {
-      chrome.storage.local.clear(() => {
+      // Remove only MindTabs-owned keys. Clearing the whole extension storage
+      // could destroy data belonging to another feature or a future migration.
+      chrome.storage.local.remove(Object.values(STORAGE_KEYS), () => {
         if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
         else resolve();
       });
@@ -77,7 +79,7 @@ export async function getAllTabs() {
   const tabs = Array.isArray(raw) ? raw : [];
   const normalized = tabs.filter(Boolean).map((tab) => ({
     ...tab,
-    id: String(tab.id || crypto.randomUUID()),
+    id: String(tab.id || generateId()),
     title: typeof tab.title === 'string' ? tab.title : 'Untitled',
     url: typeof tab.url === 'string' ? normalizeUrl(tab.url) : '',
     favicon: sanitizeFaviconUrl(tab.favicon),
@@ -130,7 +132,7 @@ export async function getAllReminders() {
   const raw = await getFromStorage(STORAGE_KEYS.REMINDERS);
   const reminders = (Array.isArray(raw) ? raw : []).filter(Boolean).map((reminder) => ({
     ...reminder,
-    id: String(reminder.id || crypto.randomUUID()),
+    id: String(reminder.id || generateId()),
     tabId: String(reminder.tabId || ''),
     remindAt: Number(reminder.remindAt) || 0,
     createdAt: Number(reminder.createdAt) || Date.now(),
