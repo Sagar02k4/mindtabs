@@ -1,4 +1,6 @@
 import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants';
+import { normalizeSettings } from './settings';
+export { normalizeSettings } from './settings';
 
 /**
  * Chrome storage wrapper with async/await support.
@@ -127,20 +129,7 @@ export async function saveReminders(reminders) {
 
 export async function getSettings() {
   const settings = await getFromStorage(STORAGE_KEYS.SETTINGS);
-  const raw = settings && typeof settings === 'object' ? settings : {};
-  const retentionDays = Number(raw.retentionDays);
-  const syncIntervalMinutes = Number(raw.syncIntervalMinutes);
-  return {
-    theme: raw.theme === 'light' ? 'light' : 'dark',
-    notifications: raw.notifications !== false,
-    tracking: raw.tracking === true,
-    onboardingComplete: raw.onboardingComplete === true,
-    retentionDays: Number.isFinite(retentionDays) ? Math.min(3650, Math.max(1, Math.round(retentionDays))) : 90,
-    syncIntervalMinutes: Number.isFinite(syncIntervalMinutes) ? Math.min(1440, Math.max(1, Math.round(syncIntervalMinutes))) : 5,
-    blockedDomains: Array.isArray(raw.blockedDomains)
-      ? raw.blockedDomains.filter(domain => typeof domain === 'string').map(domain => domain.trim().toLowerCase()).filter(Boolean).slice(0, 100)
-      : ['銀行', 'bank', 'mail.google.com'],
-  };
+  return normalizeSettings(settings);
 }
 
 export async function saveSettings(settings) {

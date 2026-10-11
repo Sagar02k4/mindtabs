@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder } from '../src/utils/reminders.js';
+import { normalizeSettings } from '../src/utils/settings.js';
 
 test('normalizeUrl groups tracking variants of one page', () => {
   assert.equal(
@@ -64,4 +65,12 @@ test('recurring reminders advance to the next future occurrence', () => {
     id: 'r', remindAt: base + 3 * 86400000, repeat: 'daily', status: 'pending', updatedAt: base + 2 * 86400000
   });
   assert.equal(advanceRecurringReminder({ remindAt: base, repeat: null, status: 'pending' }, base).status, 'completed');
+});
+
+test('settings normalization clamps unsafe values and removes invalid domains', () => {
+  const settings = normalizeSettings({ retentionDays: -50, syncIntervalMinutes: 99999, theme: 'neon', blockedDomains: [' Example.COM ', 42, ''] });
+  assert.equal(settings.retentionDays, 1);
+  assert.equal(settings.syncIntervalMinutes, 1440);
+  assert.equal(settings.theme, 'dark');
+  assert.deepEqual(settings.blockedDomains, ['example.com']);
 });
