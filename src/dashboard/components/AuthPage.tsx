@@ -533,7 +533,7 @@ export default function AuthPage() {
                 type="email"
                 placeholder="developer@example.com"
                 value={email}
-                autoComplete="off"
+                autoComplete={mode === 'reset' ? 'username' : 'email'}
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(false)}
@@ -550,6 +550,7 @@ export default function AuthPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
