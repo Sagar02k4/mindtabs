@@ -160,7 +160,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 // Handle notification clicks
-chrome.notifications.onClicked.addListener(async (notificationId) => {
+async function handleNotificationClick(notificationId) {
   if (!notificationId.startsWith('notif-')) return;
   
   const reminderId = notificationId.replace('notif-', '');
@@ -177,9 +177,15 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
   }
   
   chrome.notifications.clear(notificationId);
+}
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  handleNotificationClick(notificationId).catch((error) => {
+    console.error('MindTabs notification click failed:', error);
+  });
 });
 
-chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+async function handleNotificationButtonClick(notificationId, buttonIndex) {
   if (!notificationId.startsWith('notif-')) return;
   if (buttonIndex !== 0) return;
 
@@ -197,6 +203,12 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   }
   
   chrome.notifications.clear(notificationId);
+}
+
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  handleNotificationButtonClick(notificationId, buttonIndex).catch((error) => {
+    console.error('MindTabs notification action failed:', error);
+  });
 });
 
 
