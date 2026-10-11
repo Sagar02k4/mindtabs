@@ -46,6 +46,10 @@ jobs:
         if: matrix.name == 'WebAuthPortal'
         run: npm run lint
 
+      - name: Audit auth portal production dependencies
+        if: matrix.name == 'WebAuthPortal'
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Dependency audit
         if: matrix.name == 'Extension'
         run: npm audit --omit=dev --audit-level=high
