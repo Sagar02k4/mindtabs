@@ -52,7 +52,7 @@ export function normalizeUrl(url) {
     u.username = '';
     u.password = '';
     u.hash = '';
-    const removable = /^(utm_|fbclid$|gclid$|mc_cid$|mc_eid$|ref$|source$)/i;
+    const removable = /^(utm_|fbclid$|gclid$|mc_cid$|mc_eid$|ref$|source$|access_token$|refresh_token$|id_token$|api[_-]?key$|auth[_-]?token$|token$|signature$|sig$)/i;
     [...u.searchParams.keys()].forEach((key) => {
       if (removable.test(key)) u.searchParams.delete(key);
     });
