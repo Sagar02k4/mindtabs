@@ -254,6 +254,7 @@ const useTabStore = create((set, get) => ({
   deleteAllData: async () => {
     set({ tabs: [], reminders: [], searchQuery: '', activeTag: 'all' });
     await saveData([], []);
+    await Promise.all([saveWorkspaces([]), saveDeletedTabs([])]);
     if (typeof chrome !== 'undefined' && chrome.alarms) {
       chrome.alarms.clearAll();
     }
