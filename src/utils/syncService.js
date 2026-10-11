@@ -2,6 +2,7 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage, getDeletedTabs } from './storage';
 import { mergeLists, mergeTabs } from './merge';
 import { isSafePageUrl, normalizeUrl } from './helpers';
+import { filterRemindersForTabs } from './reminders';
 
 export { mergeLists, mergeTabs } from './merge';
 
@@ -183,10 +184,11 @@ export async function pullFromCloud(userId) {
       (a, b) => (a.updatedAt || a.createdAt) >= (b.updatedAt || b.createdAt) ? a : b
     );
 
-    await Promise.all([saveTabs(mergedTabs), saveReminders(mergedReminders)]);
+    const validReminders = filterRemindersForTabs(mergedReminders, mergedTabs);
+    await Promise.all([saveTabs(mergedTabs), saveReminders(validReminders)]);
     await setToStorage(LAST_SYNC_KEY, Date.now());
 
-    return { success: true, tabs: mergedTabs, reminders: mergedReminders };
+    return { success: true, tabs: mergedTabs, reminders: validReminders };
   } catch (err) {
     console.error('Pull from cloud failed:', err);
     return { success: false, error: err.message };

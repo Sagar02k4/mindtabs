@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup } from '../src/utils/helpers.js';
-import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime } from '../src/utils/reminders.js';
+import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
 import { retainTabsByPolicy } from '../src/utils/retention.js';
@@ -85,6 +85,11 @@ test('reminder times must be finite and in the future', () => {
   assert.equal(isValidReminderTime(200, 100), true);
   assert.equal(isValidReminderTime(100, 100), false);
   assert.equal(isValidReminderTime('invalid', 100), false);
+});
+
+test('orphaned reminders are excluded from alarm data', () => {
+  const result = filterRemindersForTabs([{ tabId: 'kept' }, { tabId: 'missing' }], [{ id: 'kept' }]);
+  assert.deepEqual(result, [{ tabId: 'kept' }]);
 });
 
 test('settings normalization clamps unsafe values and removes invalid domains', () => {

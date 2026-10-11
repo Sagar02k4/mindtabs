@@ -7,6 +7,11 @@ export function isValidReminderTime(remindAt, now = Date.now()) {
   return Number.isFinite(timestamp) && timestamp > now;
 }
 
+export function filterRemindersForTabs(reminders, tabs) {
+  const tabIds = new Set((Array.isArray(tabs) ? tabs : []).map(tab => tab.id));
+  return (Array.isArray(reminders) ? reminders : []).filter(reminder => tabIds.has(reminder.tabId));
+}
+
 export function getNextReminderTime(reminder) {
   const base = Number(reminder?.remindAt);
   if (!Number.isFinite(base) || !['daily', 'weekly'].includes(reminder?.repeat)) return null;

@@ -3,7 +3,7 @@ import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFrom
 import { generateId, getUserIdFromAccessToken, normalizeUrl, validateBackup, isSafePageUrl } from '../utils/helpers';
 import { FREE_LIMITS } from '../utils/constants';
 import { pushToCloud } from '../utils/syncService';
-import { scheduleReminderAlarms, isValidReminderTime } from '../utils/reminders';
+import { scheduleReminderAlarms, isValidReminderTime, filterRemindersForTabs } from '../utils/reminders';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 
@@ -48,9 +48,11 @@ const useTabStore = create((set, get) => ({
       getAllTabs(),
       getAllReminders(),
     ]);
-    set({ tabs: tabs || [], reminders: reminders || [], loading: false });
+    const validReminders = filterRemindersForTabs(reminders || [], tabs || []);
+    if (validReminders.length !== (reminders || []).length) await saveReminders(validReminders);
+    set({ tabs: tabs || [], reminders: validReminders, loading: false });
     if (typeof chrome !== 'undefined' && chrome.alarms) {
-      await scheduleReminderAlarms(reminders || [], chrome.alarms);
+      await scheduleReminderAlarms(validReminders, chrome.alarms);
     }
   },
 
