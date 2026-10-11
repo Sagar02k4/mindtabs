@@ -61,6 +61,33 @@ export function normalizeUrl(url) {
   }
 }
 
+export function isSafePageUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function validateBackup(data) {
+  if (!data || !Array.isArray(data.tabs) || !Array.isArray(data.reminders)) {
+    throw new Error('Invalid MindTabs backup format.');
+  }
+  if (data.tabs.length > 10000 || data.reminders.length > 10000) {
+    throw new Error('Backup is too large.');
+  }
+  const tabs = data.tabs.filter(tab => tab && typeof tab === 'object' && isSafePageUrl(tab.url)).map(tab => ({
+    ...tab,
+    url: normalizeUrl(tab.url),
+    title: String(tab.title || 'Untitled').slice(0, 500),
+    tag: tab.tag ? String(tab.tag).slice(0, 100) : null,
+  }));
+  const tabIds = new Set(tabs.map(tab => String(tab.id)));
+  const reminders = data.reminders.filter(reminder => reminder && typeof reminder === 'object' && tabIds.has(String(reminder.tabId)) && Number(reminder.remindAt) > 0);
+  return { tabs, reminders };
+}
+
 /**
  * Get favicon URL for a given page URL
  */
@@ -115,6 +142,18 @@ export function shouldExcludeUrl(url) {
     'chrome-search://',
   ];
   return excludedPatterns.some(pattern => url.startsWith(pattern));
+}
+
+export function isBlockedDomain(url, blockedDomains = []) {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return blockedDomains.some(domain => {
+      const normalized = String(domain).trim().toLowerCase().replace(/^\.+/, '');
+      return normalized && (hostname === normalized || hostname.endsWith(`.${normalized}`));
+    });
+  } catch {
+    return true;
+  }
 }
 
 /**

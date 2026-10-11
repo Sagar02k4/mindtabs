@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage } from '../utils/storage';
-import { generateId, getUserIdFromAccessToken, normalizeUrl } from '../utils/helpers';
+import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getDeletedTabs, saveDeletedTabs, getWorkspaces, saveWorkspaces } from '../utils/storage';
+import { generateId, getUserIdFromAccessToken, normalizeUrl, validateBackup, isSafePageUrl } from '../utils/helpers';
 import { FREE_LIMITS } from '../utils/constants';
 import { pushToCloud } from '../utils/syncService';
 
@@ -56,6 +56,10 @@ const useTabStore = create((set, get) => ({
 
   // Tab actions
   addTab: async (tabData) => {
+    if (!isSafePageUrl(tabData.url)) {
+      set({ actionError: 'Only http and https pages can be saved.' });
+      return null;
+    }
     const { tabs } = get();
     // Check if tab with same URL already exists
     const normalizedUrl = normalizeUrl(tabData.url);
@@ -92,7 +96,9 @@ const useTabStore = create((set, get) => ({
     const updatedTabs = tabs.filter(t => t.id !== tabId);
     const updatedReminders = reminders.filter(r => r.tabId !== tabId);
     set({ tabs: updatedTabs, reminders: updatedReminders });
-    await Promise.all([saveTabs(updatedTabs), saveReminders(updatedReminders)]);
+    await saveData(updatedTabs, updatedReminders);
+    const deleted = await getDeletedTabs();
+    await saveDeletedTabs([...deleted.filter(item => item.id !== tabId), { id: tabId, deletedAt: Date.now() }]);
     triggerSync();
   },
 
@@ -119,7 +125,7 @@ const useTabStore = create((set, get) => ({
   },
 
   // Reminder actions
-  setReminder: async (tabId, remindAt) => {
+  setReminder: async (tabId, remindAt, repeat = null) => {
     const { reminders } = get();
     // Remove existing reminder for this tab
     const filtered = reminders.filter(r => r.tabId !== tabId);
@@ -134,6 +140,7 @@ const useTabStore = create((set, get) => ({
       status: 'pending',
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      repeat: ['daily', 'weekly'].includes(repeat) ? repeat : null,
     };
     const updated = [...filtered, newReminder];
     set({ reminders: updated, actionError: null });
@@ -231,7 +238,7 @@ const useTabStore = create((set, get) => ({
   // Delete all data
   deleteAllData: async () => {
     set({ tabs: [], reminders: [], searchQuery: '', activeTag: 'all' });
-    await Promise.all([saveTabs([]), saveReminders([])]);
+    await saveData([], []);
     if (typeof chrome !== 'undefined' && chrome.alarms) {
       chrome.alarms.clearAll();
     }
@@ -255,12 +262,25 @@ const useTabStore = create((set, get) => ({
   },
 
   importData: async (data) => {
-    if (!data || !Array.isArray(data.tabs) || !Array.isArray(data.reminders)) throw new Error('Invalid MindTabs backup file.');
-    await saveTabs(data.tabs);
-    await saveReminders(data.reminders);
+    const validated = validateBackup(data);
+    const existingTabs = get().tabs;
+    const existingReminders = get().reminders;
+    const tabsByUrl = new Map([...existingTabs, ...validated.tabs].map(tab => [normalizeUrl(tab.url), tab]));
+    const remindersById = new Map([...existingReminders, ...validated.reminders].map(reminder => [reminder.id, reminder]));
+    await saveData(Array.from(tabsByUrl.values()), Array.from(remindersById.values()));
     await get().init();
     triggerSync();
   },
+
+  saveWorkspace: async (name, tabIds) => {
+    const workspaces = await getWorkspaces();
+    const now = Date.now();
+    const workspace = { id: generateId(), name: String(name || 'Untitled workspace').slice(0, 100), tabIds, createdAt: now, updatedAt: now };
+    await saveWorkspaces([...workspaces, workspace]);
+    return workspace;
+  },
+
+  getWorkspaces,
 
   // Stats
   getStats: () => {

@@ -6,10 +6,12 @@ import { TAG_OPTIONS, REMINDER_PRESETS } from '../../utils/constants';
 import { extractDomain, timeAgo, getFaviconUrl, formatDate } from '../../utils/helpers';
 
 export default function TabCard({ tab, index }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
+  const [repeat, setRepeat] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { updateTag, removeTab, setReminder, resetReminder, getReminderForTab, toggleArchive } = useTabStore();
 
@@ -40,7 +42,7 @@ export default function TabCard({ tab, index }) {
 
   const handleSetReminder = async (preset) => {
     if (preset.id === 'custom') return;
-    await (reminder ? resetReminder(tab.id, preset.getTime()) : setReminder(tab.id, preset.getTime()));
+    await (reminder ? resetReminder(tab.id, preset.getTime()) : setReminder(tab.id, preset.getTime(), repeat || null));
     setShowReminderPicker(false);
   };
 
@@ -61,15 +63,14 @@ export default function TabCard({ tab, index }) {
       <div className="flex items-start gap-4">
         {/* Favicon */}
         <div className="w-10 h-10 rounded-lg bg-surface-700/50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <img 
+          {imageFailed ? <span className="text-xs text-surface-400" aria-hidden="true">🌐</span> : <img
             src={tab.favicon || getFaviconUrl(tab.url)}
             alt=""
             className="w-6 h-6 rounded"
             onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.parentElement.innerHTML = '<span class="text-xs text-surface-400">🌐</span>';
+              setImageFailed(true);
             }}
-          />
+          />}
         </div>
 
         {/* Content */}
@@ -106,7 +107,7 @@ export default function TabCard({ tab, index }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <button
             onClick={() => toggleArchive(tab.id)}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-purple-400 transition-colors"
@@ -167,6 +168,9 @@ export default function TabCard({ tab, index }) {
               onChange={(e) => setCustomDateTime(e.target.value)}
               className="input-field text-xs"
             />
+            <select value={repeat} onChange={e => setRepeat(e.target.value)} className="input-field text-xs">
+              <option value="">No repeat</option><option value="daily">Repeat daily</option><option value="weekly">Repeat weekly</option>
+            </select>
             <button
               onClick={handleCustomReminder}
               disabled={!customDateTime}

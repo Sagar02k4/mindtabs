@@ -17,7 +17,7 @@ export default function FilterSidebar() {
   const stats = getStats();
 
   return (
-    <div className="w-64 flex-shrink-0 space-y-6">
+    <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
       {/* Tags Filter */}
       <div className="glass rounded-xl p-4">
         <h3 className="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3 flex items-center gap-2">

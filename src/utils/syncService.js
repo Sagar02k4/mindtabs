@@ -1,10 +1,11 @@
 import { supabase, isSupabaseConfigured } from './supabase';
-import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage } from './storage';
+import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage, getDeletedTabs } from './storage';
 import { mergeLists } from './merge';
 
 export { mergeLists } from './merge';
 
 const LAST_SYNC_KEY = 'mindtabs_last_sync';
+const SYNC_LOCK_KEY = 'mindtabs_sync_lock';
 let syncQueue = Promise.resolve();
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -19,6 +20,16 @@ async function withRetry(operation, attempts = 3) {
   throw lastError;
 }
 
+async function withSyncLock(operation) {
+  const storage = typeof chrome !== 'undefined' && chrome.storage?.session ? chrome.storage.session : null;
+  if (!storage) return operation();
+  const existing = await new Promise(resolve => storage.get([SYNC_LOCK_KEY], result => resolve(result[SYNC_LOCK_KEY])));
+  if (existing && existing.expiresAt > Date.now()) return { success: false, error: 'Another sync is already running.' };
+  const lock = { expiresAt: Date.now() + 30000 };
+  await new Promise(resolve => storage.set({ [SYNC_LOCK_KEY]: lock }, resolve));
+  try { return await operation(); } finally { await new Promise(resolve => storage.remove([SYNC_LOCK_KEY], resolve)); }
+}
+
 /**
  * Push local tabs and reminders to Supabase
  */
@@ -26,10 +37,10 @@ export async function pushToCloud(userId) {
   if (!isSupabaseConfigured() || !userId) return { success: false, error: 'Cloud sync is not configured or you are signed out.' };
 
   try {
-    const [tabs, reminders] = await Promise.all([getAllTabs(), getAllReminders()]);
+    const [tabs, reminders, deletedTabs] = await Promise.all([getAllTabs(), getAllReminders(), getDeletedTabs()]);
 
     // Upsert tabs
-    if (tabs.length > 0) {
+    if (tabs.length > 0 || deletedTabs.length > 0) {
       const tabRows = tabs.map(t => ({
         id: t.id,
         user_id: userId,
@@ -43,7 +54,7 @@ export async function pushToCloud(userId) {
         updated_at: t.updatedAt || t.createdAt,
         tag_updated_at: t.tagUpdatedAt || t.updatedAt || t.createdAt,
         archive_updated_at: t.archiveUpdatedAt || t.updatedAt || t.createdAt,
-      }));
+      })).concat(deletedTabs.map(t => ({ id: t.id, user_id: userId, title: null, url: null, created_at: t.deletedAt, deleted_at: t.deletedAt })));
 
       const { error: tabError } = await supabase
         .from('tabs')
@@ -62,6 +73,7 @@ export async function pushToCloud(userId) {
         status: r.status,
         created_at: r.createdAt,
         updated_at: r.updatedAt || r.createdAt,
+        repeat: r.repeat || null,
       }));
 
       const { error: remError } = await supabase
@@ -75,13 +87,13 @@ export async function pushToCloud(userId) {
     const localTabIds = tabs.map(t => t.id);
     const { data: cloudTabs, error: cloudTabsError } = await supabase
       .from('tabs')
-      .select('id')
+      .select('id, deleted_at')
       .eq('user_id', userId);
     if (cloudTabsError) throw cloudTabsError;
 
     if (cloudTabs) {
       const toDelete = cloudTabs
-        .filter(ct => !localTabIds.includes(ct.id))
+        .filter(ct => !ct.deleted_at && !localTabIds.includes(ct.id) && !deletedTabs.some(dt => dt.id === ct.id))
         .map(ct => ct.id);
 
       if (toDelete.length > 0) {
@@ -131,11 +143,12 @@ export async function pullFromCloud(userId) {
 
     const localTabs = await getAllTabs();
     const localReminders = await getAllReminders();
+    const cloudDeletedIds = new Set((cloudTabs || []).filter(tab => tab.deleted_at).map(tab => tab.id));
 
     // Merge tabs (last-write-wins based on last_visited / createdAt)
     const mergedTabs = mergeLists(
-      localTabs,
-      (cloudTabs || []).map(ct => ({
+      localTabs.filter(tab => !cloudDeletedIds.has(tab.id)),
+      (cloudTabs || []).filter(ct => !ct.deleted_at).map(ct => ({
         id: ct.id,
         title: ct.title,
         url: ct.url,
@@ -162,6 +175,7 @@ export async function pullFromCloud(userId) {
         status: cr.status,
         createdAt: cr.created_at,
         updatedAt: cr.updated_at || cr.created_at,
+        repeat: cr.repeat || null,
       })),
       'id',
       (a, b) => (a.updatedAt || a.createdAt) >= (b.updatedAt || b.createdAt) ? a : b
@@ -199,7 +213,7 @@ export async function fullSync(userId) {
       return { success: false, error: error.message || 'Cloud sync failed.' };
     }
   };
-  const result = syncQueue.then(run, run);
+  const result = syncQueue.then(() => withSyncLock(run), () => withSyncLock(run));
   syncQueue = result.catch(() => undefined);
   return result;
 }

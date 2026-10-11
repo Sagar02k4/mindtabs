@@ -25,8 +25,23 @@
     "storage",
     "alarms",
     "notifications",
-    "identity"
+    "identity",
+    "contextMenus"
   ],
+  "commands": {
+    "save-current-tab": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+M"
+      },
+      "description": "Save the current tab to MindTabs"
+    },
+    "open-dashboard": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+D"
+      },
+      "description": "Open the MindTabs dashboard"
+    }
+  },
   "chrome_url_overrides": {},
   "options_page": "src/dashboard/index.html"
 }

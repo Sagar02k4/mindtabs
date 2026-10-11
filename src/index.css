@@ -174,7 +174,8 @@
     @apply bg-surface-800/50 text-surface-200 px-4 py-2 rounded-lg
            font-medium text-sm border border-surface-700/50 transition-all duration-200
            hover:bg-surface-700/50 hover:border-surface-600/50
-           active:scale-[0.98];
+           active:scale-[0.98]
+           focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-950;
   }
 
   .btn-ghost {
@@ -188,7 +189,8 @@
     @apply bg-red-500/10 text-red-400 px-4 py-2 rounded-lg
            font-medium text-sm border border-red-500/20 transition-all duration-200
            hover:bg-red-500/20 hover:border-red-500/30
-           active:scale-[0.98];
+           active:scale-[0.98]
+           focus-visible:ring-2 focus-visible:ring-red-300 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-950;
   }
 
   .input-field {

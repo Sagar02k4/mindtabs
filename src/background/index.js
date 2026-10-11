@@ -1,6 +1,6 @@
-import { shouldExcludeUrl, generateId, getUserIdFromAccessToken, normalizeUrl } from '../utils/helpers';
+import { shouldExcludeUrl, generateId, getUserIdFromAccessToken, normalizeUrl, isSafePageUrl, isBlockedDomain } from '../utils/helpers';
 import { CLEANUP_ALARM, CLEANUP_AFTER_DAYS } from '../utils/constants';
-import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, getSettings } from '../utils/storage';
+import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getSettings } from '../utils/storage';
 import { fullSync } from '../utils/syncService';
 import { isSupabaseConfigured } from '../utils/supabase';
 
@@ -18,7 +18,7 @@ async function trackTab(tab) {
   if (tab.incognito) return;
   
   // Skip tabs without URLs or with excluded URLs
-  if (!tab.url || shouldExcludeUrl(tab.url)) return;
+  if (!tab.url || shouldExcludeUrl(tab.url) || !isSafePageUrl(tab.url) || isBlockedDomain(tab.url, settings.blockedDomains)) return;
   
   // Skip pending/loading tabs without titles
   if (tab.status === 'loading' && !tab.title) return;
@@ -81,7 +81,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const [tabs, reminders] = await Promise.all([getAllTabs(), getAllReminders()]);
     const reminderTabIds = new Set(reminders.filter(r => r.status === 'pending').map(r => r.tabId));
     const retained = tabs.filter(t => t.isArchived || (t.lastVisited || t.createdAt) >= cutoff || reminderTabIds.has(t.id));
-    if (retained.length !== tabs.length) await saveTabs(retained);
+    if (retained.length !== tabs.length) await saveData(retained, reminders);
     return;
   }
   if (alarm.name === 'sync-alarm') {
@@ -127,9 +127,14 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     }
   }
 
-  // Mark reminder as completed
+  if (reminder.repeat === 'daily' || reminder.repeat === 'weekly') {
+    const interval = reminder.repeat === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+    await chrome.alarms.create(`reminder-${reminder.id}`, { when: reminder.remindAt + interval });
+  }
+
+  // Mark reminder complete, or advance the next recurring occurrence.
   const updatedReminders = reminders.map(r =>
-    r.id === reminderId ? { ...r, status: 'completed', updatedAt: Date.now() } : r
+    r.id === reminderId ? { ...r, status: r.repeat ? 'pending' : 'completed', remindAt: r.repeat ? r.remindAt + (r.repeat === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000) : r.remindAt, updatedAt: Date.now() } : r
   );
   await saveReminders(updatedReminders);
 });
@@ -191,6 +196,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   chrome.alarms.create(CLEANUP_ALARM, { periodInMinutes: 7 * 24 * 60 });
   await restoreReminderAlarms();
   await importOpenTabs();
+  chrome.contextMenus.removeAll(() => chrome.contextMenus.create({ id: 'mindtabs-save-page', title: 'Save page to MindTabs', contexts: ['page'] }));
 });
 
 chrome.runtime.onStartup.addListener(async () => {
@@ -199,6 +205,18 @@ chrome.runtime.onStartup.addListener(async () => {
   chrome.alarms.create(CLEANUP_ALARM, { periodInMinutes: 7 * 24 * 60 });
   await restoreReminderAlarms();
   await importOpenTabs();
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'mindtabs-save-page' && tab) await trackTab(tab);
+});
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'open-dashboard') chrome.runtime.openOptionsPage();
+  if (command === 'save-current-tab') {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) await trackTab(tab);
+  }
 });
 
 async function restoreReminderAlarms() {

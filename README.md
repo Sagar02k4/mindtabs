@@ -123,6 +123,14 @@ npm run dev
 ```
 Any changes you make to the source code will automatically reflect in the loaded extension.
 
+## 🔐 Privacy and data controls
+
+MindTabs may store page titles, normalized URLs, tags, archive state, and reminders in Chrome storage. If cloud sync is enabled, this metadata is also stored in the configured Supabase project under the authenticated user's account. Users can pause tracking, configure domains that should never be tracked, disable notifications, export their data, import a validated backup, and delete all local data from the dashboard. Do not enable tracking on devices where browsing metadata cannot be stored safely.
+
+Only `http` and `https` pages are accepted. Executable URL schemes such as `javascript:`, `data:`, and `file:` are rejected by the import and save flows.
+
+Before production release, review the Supabase RLS policies, run the versioned schema migration, configure the deployed auth portal origin, and run `npm audit --audit-level=high` in CI.
+
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome!
 

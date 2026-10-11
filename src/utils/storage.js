@@ -26,7 +26,7 @@ export async function getFromStorage(key) {
 export async function setToStorage(key, value) {
   if (isExtension) {
     return new Promise((resolve) => {
-      chrome.storage.local.set({ [key]: value }, resolve);
+      chrome.storage.local.set({ [key]: value }, () => resolve());
     });
   }
   try {
@@ -78,6 +78,32 @@ export async function saveTabs(tabs) {
   await setToStorage(STORAGE_KEYS.TABS, tabs);
 }
 
+export async function getDeletedTabs() {
+  const deleted = await getFromStorage(STORAGE_KEYS.DELETED_TABS);
+  return Array.isArray(deleted) ? deleted : [];
+}
+
+export async function saveDeletedTabs(deleted) {
+  await setToStorage(STORAGE_KEYS.DELETED_TABS, deleted);
+}
+
+export async function saveData(tabs, reminders) {
+  if (isExtension) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [STORAGE_KEYS.TABS]: tabs, [STORAGE_KEYS.REMINDERS]: reminders }, () => {
+        if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve();
+      });
+    });
+  }
+  try {
+    localStorage.setItem(STORAGE_KEYS.TABS, JSON.stringify(tabs));
+    localStorage.setItem(STORAGE_KEYS.REMINDERS, JSON.stringify(reminders));
+  } catch (error) {
+    throw new Error(`Could not save MindTabs data: ${error.message}`);
+  }
+}
+
 export async function getAllReminders() {
   const raw = await getFromStorage(STORAGE_KEYS.REMINDERS);
   const reminders = (Array.isArray(raw) ? raw : []).filter(Boolean).map((reminder) => ({
@@ -88,6 +114,7 @@ export async function getAllReminders() {
     createdAt: Number(reminder.createdAt) || Date.now(),
     updatedAt: Number(reminder.updatedAt) || Number(reminder.createdAt) || Date.now(),
     status: ['pending', 'completed', 'cancelled'].includes(reminder.status) ? reminder.status : 'pending',
+    repeat: ['daily', 'weekly'].includes(reminder.repeat) ? reminder.repeat : null,
   })).filter(reminder => reminder.tabId && reminder.remindAt > 0);
   if (JSON.stringify(raw) !== JSON.stringify(reminders)) await setToStorage(STORAGE_KEYS.REMINDERS, reminders);
   await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
@@ -100,9 +127,18 @@ export async function saveReminders(reminders) {
 
 export async function getSettings() {
   const settings = await getFromStorage(STORAGE_KEYS.SETTINGS);
-  return { theme: 'dark', notifications: true, tracking: true, retentionDays: 90, syncIntervalMinutes: 5, ...(settings || {}) };
+  return { theme: 'dark', notifications: true, tracking: true, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: ['銀行', 'bank', 'mail.google.com'], ...(settings || {}) };
 }
 
 export async function saveSettings(settings) {
   await setToStorage(STORAGE_KEYS.SETTINGS, settings);
+}
+
+export async function getWorkspaces() {
+  const workspaces = await getFromStorage(STORAGE_KEYS.WORKSPACES);
+  return Array.isArray(workspaces) ? workspaces : [];
+}
+
+export async function saveWorkspaces(workspaces) {
+  await setToStorage(STORAGE_KEYS.WORKSPACES, workspaces);
 }

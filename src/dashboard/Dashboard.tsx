@@ -26,7 +26,7 @@ function DashboardContent() {
   const [syncMessage, setSyncMessage] = useState('');
   const [selected, setSelected] = useState(new Set());
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({ tracking: true, notifications: true, retentionDays: 90, syncIntervalMinutes: 5 });
+  const [settings, setSettings] = useState({ tracking: true, notifications: true, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
   const pageSize = 20;
   const filteredTabs = getFilteredTabs();
   const pageCount = Math.max(1, Math.ceil(filteredTabs.length / pageSize));
@@ -74,9 +74,10 @@ function DashboardContent() {
     const blob = new Blob([content], { type: csv ? 'text/csv' : 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mindtabs-backup.${csv ? 'csv' : 'json'}`; a.click(); URL.revokeObjectURL(a.href);
   };
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = async () => { try { await useTabStore.getState().importData(JSON.parse(String(reader.result))); setSyncMessage('Backup imported successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
-  const updateSettings = async (next) => { const merged = { ...settings, ...next }; setSettings(merged); await saveSettings(merged); setSyncMessage('Settings saved.'); };
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); return; } if (!window.confirm('Import this backup and merge it with your current data?')) return; const reader = new FileReader(); reader.onload = async () => { try { await useTabStore.getState().importData(JSON.parse(String(reader.result))); setSyncMessage('Backup imported and merged successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
+  const updateSettings = async (next) => { const merged = { ...settings, ...next }; setSettings(merged); await saveSettings(merged); const browser = (globalThis as any).chrome; if (browser?.alarms) { if (next.syncIntervalMinutes) browser.alarms.create('sync-alarm', { periodInMinutes: Math.max(1, Number(merged.syncIntervalMinutes)) }); if (next.retentionDays) browser.alarms.create('weekly-cleanup', { periodInMinutes: 7 * 24 * 60 }); } setSyncMessage('Settings saved.'); };
   const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank'); });
+  const saveWorkspace = async () => { if (!selected.size) { setSyncMessage('Select tabs before saving a workspace.'); return; } const name = window.prompt('Workspace name'); if (name) { await useTabStore.getState().saveWorkspace(name, [...selected]); setSyncMessage(`Workspace “${name}” saved.`); } };
 
 
 
@@ -119,7 +120,7 @@ function DashboardContent() {
         >
             <div className="flex flex-wrap items-center gap-2 mb-6">
               <button className="btn-secondary" onClick={() => { const ids = visibleTabs.map(t => t.id); setSelected(new Set(ids)); }}><FolderOpen size={14} /> Select page</button>
-              {selected.size > 0 && <><button className="btn-secondary" onClick={openSelected}>Open selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'archive')}>Archive selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'unarchive')}>Unarchive selected</button><button className="btn-secondary" onClick={() => setSelected(new Set())}>Clear selection</button></>}
+              {selected.size > 0 && <><button className="btn-secondary" onClick={openSelected}>Open selected</button><button className="btn-secondary" onClick={saveWorkspace}>Save workspace</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'archive')}>Archive selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'unarchive')}>Unarchive selected</button><button className="btn-secondary" onClick={() => setSelected(new Set())}>Clear selection</button></>}
               <button className="btn-secondary" onClick={() => exportData(false)}><Download size={14} /> Export JSON</button>
               <button className="btn-secondary" onClick={() => exportData(true)}>Export CSV</button>
               <label className="btn-secondary cursor-pointer"><Upload size={14} /> Import JSON<input type="file" accept="application/json" className="hidden" onChange={importData} /></label>
@@ -130,6 +131,7 @@ function DashboardContent() {
               <label><input type="checkbox" checked={settings.notifications} onChange={e => updateSettings({ notifications: e.target.checked })} /> Notifications</label>
               <label>Retention days <input className="input-field w-20 ml-2" type="number" min="7" value={settings.retentionDays} onChange={e => updateSettings({ retentionDays: Number(e.target.value) })} /></label>
               <label>Sync minutes <input className="input-field w-20 ml-2" type="number" min="1" value={settings.syncIntervalMinutes} onChange={e => updateSettings({ syncIntervalMinutes: Number(e.target.value) })} /></label>
+              <label className="md:col-span-4">Never track domains <input className="input-field w-full mt-1" value={settings.blockedDomains.join(', ')} onChange={e => updateSettings({ blockedDomains: e.target.value.split(',').map(value => value.trim()).filter(Boolean) })} placeholder="bank.example, mail.example" /></label>
             </div>}
             {reminders.filter(r => r.status === 'pending').length > 0 && <div className="glass rounded-xl p-4 mb-6"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Bell size={15} /> Upcoming reminders</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status === 'pending').sort((a,b) => a.remindAt-b.remindAt).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between"><span className="truncate">{tab?.title || 'Saved page'}</span><span>{new Date(r.remindAt).toLocaleString()}</span></div>; })}</div></div>}
             <div className="mb-6">

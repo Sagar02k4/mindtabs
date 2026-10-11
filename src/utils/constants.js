@@ -4,6 +4,9 @@ export const STORAGE_KEYS = {
   REMINDERS: 'mindtabs_reminders',
   SETTINGS: 'mindtabs_settings',
   SCHEMA_VERSION: 'mindtabs_schema_version',
+  DELETED_TABS: 'mindtabs_deleted_tabs',
+  DELETED_REMINDERS: 'mindtabs_deleted_reminders',
+  WORKSPACES: 'mindtabs_workspaces',
 };
 export const STORAGE_SCHEMA_VERSION = 2;
 
