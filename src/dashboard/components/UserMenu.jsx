@@ -9,6 +9,7 @@ export default function UserMenu() {
   const [open, setOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
+  const [syncMessage, setSyncMessage] = useState('');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -30,8 +31,15 @@ export default function UserMenu() {
   const handleSync = async () => {
     if (!user) return;
     setSyncing(true);
-    await fullSync(user.id);
-    setSyncing(false);
+    setSyncMessage('Syncing…');
+    try {
+      const result = await fullSync(user.id);
+      setSyncMessage(result.success ? 'Sync completed.' : (result.error || 'Sync failed. Local data is safe.'));
+    } catch (error) {
+      setSyncMessage(error instanceof Error ? error.message : 'Sync failed. Local data is safe.');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -102,12 +110,15 @@ export default function UserMenu() {
           <button
             onClick={handleSync}
             disabled={syncing}
+            aria-busy={syncing}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm
                       hover:bg-surface-700/50 text-surface-300 transition-colors disabled:opacity-50"
           >
             <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} />
             {syncing ? 'Syncing...' : 'Sync Now'}
           </button>
+
+          {syncMessage && <p role="status" className="px-3 py-2 text-[11px] text-surface-400">{syncMessage}</p>}
 
           <button
             onClick={handleSignOut}
