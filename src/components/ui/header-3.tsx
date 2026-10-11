@@ -49,7 +49,7 @@ export function Header({ onSignIn }: { onSignIn?: () => void }) {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-cyan flex items-center justify-center shadow-lg shadow-primary-500/25">
                           <Sparkles size={16} className="text-white" />
                         </div>
-                        <span className="font-bold text-lg gradient-text">MindTabs</span>
+                        <span className="font-bold text-lg text-primary-300">MindTabs</span>
 					</a>
 					<NavigationMenu className="hidden md:flex ml-4">
 						<NavigationMenuList>

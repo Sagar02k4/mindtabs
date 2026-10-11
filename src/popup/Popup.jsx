@@ -140,7 +140,7 @@ export default function Popup() {
                           flex items-center justify-center shadow-lg shadow-primary-500/25">
               <Sparkles size={18} className="text-white" />
             </div>
-            <h1 className="text-lg font-bold gradient-text">MindTabs</h1>
+            <h1 className="text-lg font-bold text-primary-300">MindTabs</h1>
           </div>
           <div className="flex items-center gap-1">
             {isAuthenticated && (

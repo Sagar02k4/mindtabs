@@ -135,7 +135,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className={`min-h-screen bg-background text-foreground ${settings.theme === 'dark' ? 'dark' : ''}`}>
+    <div className={`min-h-screen bg-background text-foreground ${settings.theme === 'dark' ? 'dark' : 'theme-light'}`}>
       <Header onSignIn={() => navigate('/login')} />
 
       <main className="grow pb-16">
