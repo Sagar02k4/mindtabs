@@ -23,6 +23,11 @@
 - **Smart Reminders**: Don't lose track of important pages. Set a reminder to revisit a specific tab later.
 - **Cloud Sync**: Securely sync your tab data across devices using Supabase Authentication and Database.
 - **Non-Intrusive Popup**: A beautiful, minimal popup to quickly save your current mindset without breaking your flow.
+- **Recurring Reminders**: Repeat reminders daily or weekly, with alarms restored after browser restarts.
+- **Workspaces & Bulk Actions**: Save tab groups, restore them later, and archive or open selected pages together.
+- **Privacy Controls**: First-run consent, blocked domains, normalized URLs, retention cleanup, and local/cloud data controls.
+- **Portable Backups**: Export/import validated JSON and CSV backups, including password-protected encrypted backups.
+- **Accessible Responsive UI**: Keyboard-friendly dialogs and actions with layouts that work across popup, desktop, and touch sizes.
 
 ## 🛠 Tech Stack
 Built with modern web technologies for blazing-fast performance:

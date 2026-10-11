@@ -1,13 +1,17 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
-import ResetPassword from './pages/ResetPassword';
+
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-    </Routes>
+    <Suspense fallback={<main className="min-h-screen bg-background" aria-label="Loading MindTabs" />}>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+      </Routes>
+    </Suspense>
   );
 }
 
