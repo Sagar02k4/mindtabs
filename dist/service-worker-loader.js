@@ -1,1 +1,1 @@
-import './assets/index.js-BwofMc_W.js';
+import './assets/index.js-WsI6_apn.js';
