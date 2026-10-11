@@ -4,6 +4,7 @@ import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBa
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
+import { retainTabsByPolicy } from '../src/utils/retention.js';
 
 test('normalizeUrl groups tracking variants of one page', () => {
   assert.equal(
@@ -98,4 +99,15 @@ test('workspace normalization removes malformed records and duplicate tab ids', 
   assert.equal(result.length, 1);
   assert.equal(result[0].name, 'Focus');
   assert.deepEqual(result[0].tabIds, ['a', '2']);
+});
+
+test('retention cleanup keeps archived and reminded tabs', () => {
+  const tabs = [
+    { id: 'fresh', lastVisited: 200 },
+    { id: 'old', lastVisited: 50 },
+    { id: 'archived', lastVisited: 1, isArchived: true },
+    { id: 'reminded', lastVisited: 1 },
+  ];
+  const retained = retainTabsByPolicy(tabs, [{ tabId: 'reminded', status: 'pending' }], 100);
+  assert.deepEqual(retained.map(tab => tab.id), ['fresh', 'archived', 'reminded']);
 });

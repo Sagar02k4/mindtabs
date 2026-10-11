@@ -4,6 +4,7 @@ import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFrom
 import { fullSync } from '../utils/syncService';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { scheduleReminderAlarms, advanceRecurringReminder } from '../utils/reminders';
+import { retainTabsByPolicy } from '../utils/retention';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 
@@ -80,8 +81,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const settings = await getSettings();
     const cutoff = Date.now() - (Number(settings.retentionDays) || CLEANUP_AFTER_DAYS) * 24 * 60 * 60 * 1000;
     const [tabs, reminders] = await Promise.all([getAllTabs(), getAllReminders()]);
-    const reminderTabIds = new Set(reminders.filter(r => r.status === 'pending').map(r => r.tabId));
-    const retained = tabs.filter(t => t.isArchived || (t.lastVisited || t.createdAt) >= cutoff || reminderTabIds.has(t.id));
+    const retained = retainTabsByPolicy(tabs, reminders, cutoff);
     if (retained.length !== tabs.length) await saveData(retained, reminders);
     return;
   }
