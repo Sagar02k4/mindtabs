@@ -1,3 +1,5 @@
+import { normalizeBlockedDomain } from './helpers';
+
 export function normalizeSettings(settings) {
   const raw = settings && typeof settings === 'object' ? settings : {};
   const retentionDays = Number(raw.retentionDays);
@@ -10,7 +12,7 @@ export function normalizeSettings(settings) {
     retentionDays: Number.isFinite(retentionDays) ? Math.min(3650, Math.max(1, Math.round(retentionDays))) : 90,
     syncIntervalMinutes: Number.isFinite(syncIntervalMinutes) ? Math.min(1440, Math.max(1, Math.round(syncIntervalMinutes))) : 5,
     blockedDomains: Array.isArray(raw.blockedDomains)
-      ? raw.blockedDomains.filter(domain => typeof domain === 'string').map(domain => domain.trim().toLowerCase()).filter(Boolean).slice(0, 100)
+      ? raw.blockedDomains.map(normalizeBlockedDomain).filter(Boolean).slice(0, 100)
       : ['銀行', 'bank', 'mail.google.com'],
   };
 }

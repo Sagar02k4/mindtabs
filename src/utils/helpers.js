@@ -238,6 +238,18 @@ export function isBlockedDomain(url, blockedDomains = []) {
   }
 }
 
+export function normalizeBlockedDomain(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return null;
+  try {
+    const candidate = raw.includes('://') ? new URL(raw).hostname : raw.replace(/^\.+/, '');
+    if (!candidate || candidate.includes('/') || candidate.includes(':') || candidate.includes(' ')) return null;
+    return candidate;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Debounce function
  */

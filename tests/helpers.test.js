@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken, escapeCsvCell } from '../src/utils/helpers.js';
+import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken, escapeCsvCell, normalizeBlockedDomain } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
@@ -60,6 +60,12 @@ test('expired access tokens are rejected for background identity use', () => {
 test('CSV export escapes spreadsheet formulas', () => {
   assert.equal(escapeCsvCell('=HYPERLINK("https://evil.example")'), `"'=HYPERLINK(""https://evil.example"")"`);
   assert.equal(escapeCsvCell('ordinary text'), '"ordinary text"');
+});
+
+test('blocked-domain input is normalized to hostnames', () => {
+  assert.equal(normalizeBlockedDomain('https://Bank.Example/login'), 'bank.example');
+  assert.equal(normalizeBlockedDomain('..mail.example'), 'mail.example');
+  assert.equal(normalizeBlockedDomain('example.com/path'), null);
 });
 
 test('backup validation removes unsafe and orphaned records', () => {
