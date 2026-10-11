@@ -39,6 +39,7 @@ const useTabStore = create((set, get) => ({
   activeTag: 'all',
   sortBy: 'newest',
   actionError: null,
+  lastDeleted: null,
 
   // Initialize store from storage
   init: async () => {
@@ -93,13 +94,28 @@ const useTabStore = create((set, get) => ({
 
   removeTab: async (tabId) => {
     const { tabs, reminders } = get();
+    const deletedTab = tabs.find(t => t.id === tabId);
+    const deletedReminders = reminders.filter(r => r.tabId === tabId);
     const updatedTabs = tabs.filter(t => t.id !== tabId);
     const updatedReminders = reminders.filter(r => r.tabId !== tabId);
-    set({ tabs: updatedTabs, reminders: updatedReminders });
+    set({ tabs: updatedTabs, reminders: updatedReminders, lastDeleted: deletedTab ? { tab: deletedTab, reminders: deletedReminders } : null });
     await saveData(updatedTabs, updatedReminders);
     const deleted = await getDeletedTabs();
     await saveDeletedTabs([...deleted.filter(item => item.id !== tabId), { id: tabId, deletedAt: Date.now() }]);
     triggerSync();
+  },
+
+  undoLastDelete: async () => {
+    const { lastDeleted, tabs, reminders } = get();
+    if (!lastDeleted) return false;
+    const restoredTabs = [lastDeleted.tab, ...tabs];
+    const restoredReminders = [...reminders, ...lastDeleted.reminders];
+    await saveData(restoredTabs, restoredReminders);
+    const deleted = await getDeletedTabs();
+    await saveDeletedTabs(deleted.filter(item => item.id !== lastDeleted.tab.id));
+    set({ tabs: restoredTabs, reminders: restoredReminders, lastDeleted: null });
+    triggerSync();
+    return true;
   },
 
   updateTag: async (tabId, tag) => {

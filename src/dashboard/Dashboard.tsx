@@ -5,7 +5,7 @@ import useTabStore from '../store/tabStore';
 import useAuthStore from '../store/authStore';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
-import { getSettings, saveSettings } from '../utils/storage';
+import { getSettings, saveSettings, getWorkspaces } from '../utils/storage';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
 import StatsCards from './components/StatsCards';
@@ -18,7 +18,7 @@ import AuthPage from './components/AuthPage';
 
 function DashboardContent() {
   const navigate = useNavigate();
-  const { tabs, reminders, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, activeTag, actionError, clearActionError } = useTabStore();
+  const { tabs, reminders, lastDeleted, undoLastDelete, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, activeTag, actionError, clearActionError } = useTabStore();
   const { isAuthenticated, user, loading: authLoading, restoreSession } = useAuthStore();
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -27,6 +27,7 @@ function DashboardContent() {
   const [selected, setSelected] = useState(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({ tracking: true, notifications: true, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
   const pageSize = 20;
   const filteredTabs = getFilteredTabs();
   const pageCount = Math.max(1, Math.ceil(filteredTabs.length / pageSize));
@@ -39,6 +40,7 @@ function DashboardContent() {
       }
       await init();
       setSettings(await getSettings());
+      setWorkspaces(await getWorkspaces());
     };
     bootstrap();
   }, []);
@@ -78,6 +80,7 @@ function DashboardContent() {
   const updateSettings = async (next) => { const merged = { ...settings, ...next }; setSettings(merged); await saveSettings(merged); const browser = (globalThis as any).chrome; if (browser?.alarms) { if (next.syncIntervalMinutes) browser.alarms.create('sync-alarm', { periodInMinutes: Math.max(1, Number(merged.syncIntervalMinutes)) }); if (next.retentionDays) browser.alarms.create('weekly-cleanup', { periodInMinutes: 7 * 24 * 60 }); } setSyncMessage('Settings saved.'); };
   const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank'); });
   const saveWorkspace = async () => { if (!selected.size) { setSyncMessage('Select tabs before saving a workspace.'); return; } const name = window.prompt('Workspace name'); if (name) { await useTabStore.getState().saveWorkspace(name, [...selected]); setSyncMessage(`Workspace “${name}” saved.`); } };
+  const restoreWorkspace = (workspace) => { const ids = new Set(workspace.tabIds); setSelected(ids); tabs.filter(tab => ids.has(tab.id)).forEach(tab => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: tab.url }); else window.open(tab.url, '_blank'); }); setSyncMessage(`Opened workspace “${workspace.name}”.`); };
 
 
 
@@ -113,6 +116,7 @@ function DashboardContent() {
             <div role="status" className="rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-200">{syncMessage}</div>
           </div>
         )}
+        {lastDeleted && <div className="max-w-7xl mx-auto px-6 pt-3"><div role="status" className="flex items-center justify-between rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200"><span>“{lastDeleted.tab.title}” deleted.</span><button className="btn-secondary" onClick={undoLastDelete}>Undo</button></div></div>}
         <HeroDashboardWrapper 
           onRefresh={handleRefresh} 
           onClearAll={() => setShowDeleteAll(true)}
@@ -125,6 +129,7 @@ function DashboardContent() {
               <button className="btn-secondary" onClick={() => exportData(true)}>Export CSV</button>
               <label className="btn-secondary cursor-pointer"><Upload size={14} /> Import JSON<input type="file" accept="application/json" className="hidden" onChange={importData} /></label>
               <button className="btn-secondary" onClick={() => setShowSettings(!showSettings)}><Settings size={14} /> Settings</button>
+              {workspaces.length > 0 && <select className="btn-secondary" aria-label="Open saved workspace" defaultValue="" onChange={e => { const workspace = workspaces.find(item => item.id === e.target.value); if (workspace) restoreWorkspace(workspace); e.target.value = ''; }}><option value="">Workspaces</option>{workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select>}
             </div>
             {showSettings && <div className="glass rounded-xl p-4 mb-6 grid gap-3 md:grid-cols-4 text-sm">
               <label><input type="checkbox" checked={settings.tracking} onChange={e => updateSettings({ tracking: e.target.checked })} /> Track tabs</label>
