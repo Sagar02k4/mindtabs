@@ -1,4 +1,4 @@
-import { shouldExcludeUrl, generateId, getUserIdFromAccessToken, normalizeUrl, isSafePageUrl, isBlockedDomain } from '../utils/helpers';
+import { shouldExcludeUrl, generateId, getUserIdFromAccessToken, normalizeUrl, isSafePageUrl, isBlockedDomain, sanitizeFaviconUrl } from '../utils/helpers';
 import { CLEANUP_ALARM, CLEANUP_AFTER_DAYS } from '../utils/constants';
 import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getSettings, getDeletedTabs, saveDeletedTabs } from '../utils/storage';
 import { fullSync } from '../utils/syncService';
@@ -36,7 +36,7 @@ async function trackTab(tab) {
     tabs[existingIndex] = {
       ...tabs[existingIndex],
       title: tab.title || tabs[existingIndex].title,
-      favicon: tab.favIconUrl || tabs[existingIndex].favicon,
+      favicon: sanitizeFaviconUrl(tab.favIconUrl) || tabs[existingIndex].favicon,
       lastVisited: Date.now(),
       updatedAt: Date.now(),
     };
@@ -46,7 +46,7 @@ async function trackTab(tab) {
       id: generateId(),
       title: tab.title || 'Untitled',
       url: normalizedUrl,
-      favicon: tab.favIconUrl || null,
+      favicon: sanitizeFaviconUrl(tab.favIconUrl),
       tag: null,
       createdAt: Date.now(),
       lastVisited: Date.now(),

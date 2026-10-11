@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getDeletedTabs, saveDeletedTabs, getWorkspaces, saveWorkspaces } from '../utils/storage';
-import { generateId, getUserIdFromAccessToken, normalizeUrl, validateBackup, isSafePageUrl } from '../utils/helpers';
+import { generateId, getUserIdFromAccessToken, normalizeUrl, validateBackup, isSafePageUrl, sanitizeFaviconUrl } from '../utils/helpers';
 import { FREE_LIMITS } from '../utils/constants';
 import { pushToCloud } from '../utils/syncService';
 import { scheduleReminderAlarms, isValidReminderTime, filterRemindersForTabs } from '../utils/reminders';
@@ -77,7 +77,7 @@ const useTabStore = create((set, get) => ({
       id: generateId(),
       title: tabData.title || 'Untitled',
       url: normalizedUrl,
-      favicon: tabData.favicon || null,
+      favicon: sanitizeFaviconUrl(tabData.favicon),
       tag: null,
       isArchived: false,
       createdAt: now,
