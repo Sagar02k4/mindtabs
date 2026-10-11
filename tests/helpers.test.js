@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl } from '../src/utils/helpers.js';
+import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
@@ -46,6 +46,15 @@ test('generated identifiers use UUID entropy when available', () => {
 test('favicon metadata accepts only web URLs', () => {
   assert.equal(sanitizeFaviconUrl('javascript:alert(1)'), null);
   assert.equal(sanitizeFaviconUrl('https://cdn.example/icon.png'), 'https://cdn.example/icon.png');
+});
+
+test('expired access tokens are rejected for background identity use', () => {
+  const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const header = encode({ alg: 'none', typ: 'JWT' });
+  const expired = encode({ sub: 'user-1', exp: Math.floor(Date.now() / 1000) - 60 });
+  const active = encode({ sub: 'user-1', exp: Math.floor(Date.now() / 1000) + 3600 });
+  assert.equal(getUserIdFromAccessToken(`${header}.${expired}.signature`), null);
+  assert.equal(getUserIdFromAccessToken(`${header}.${active}.signature`), 'user-1');
 });
 
 test('backup validation removes unsafe and orphaned records', () => {

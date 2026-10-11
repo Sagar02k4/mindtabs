@@ -187,7 +187,9 @@ export function getUserIdFromAccessToken(accessToken) {
     if (!payload) return null;
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + ((4 - base64.length % 4) % 4), '=');
-    return JSON.parse(atob(padded))?.sub || null;
+    const claims = JSON.parse(atob(padded));
+    if (Number.isFinite(Number(claims.exp)) && Number(claims.exp) * 1000 <= Date.now()) return null;
+    return claims?.sub || null;
   } catch {
     return null;
   }
