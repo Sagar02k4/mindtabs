@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Scoped local data deletion to MindTabs-owned storage keys and added a regression test to prevent cross-feature data loss.
+- Made storage migrations portable across Chrome and Node test environments by using safe ID generation and explicit ESM imports.
+- Clarified release verification commands and corrected the README logo path.
+
 ## 1.1.0
 
 - Added privacy-first tracking consent, blocked domains, URL normalization, retention cleanup, and safe `http`/`https` validation.

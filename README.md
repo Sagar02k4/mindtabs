@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="icons/icon128.png" alt="MindTabs Logo" width="120" />
+  <img src="public/icons/icon128.png" alt="MindTabs Logo" width="120" />
   <h1>MindTabs</h1>
   <p><em>Gain clarity. Reduce tab overload. Reclaim your focus.</em></p>
 
@@ -31,7 +31,7 @@
 
 ## 🛠 Tech Stack
 Built with modern web technologies for blazing-fast performance:
-- **Framework**: [React 18](https://reactjs.org/)
+- **Framework**: [React 18](https://react.dev/)
 - **Build Tool**: [Vite](https://vitejs.dev/) + [CRXJS](https://crxjs.dev/vite-plugin) for seamless Chrome Extension development
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
@@ -127,6 +127,14 @@ To start the development server:
 npm run dev
 ```
 Any changes you make to the source code will automatically reflect in the loaded extension.
+
+For a release-quality local check, run:
+
+```bash
+npm run check
+npm --prefix WebAuthPortal run lint
+npm --prefix WebAuthPortal run build
+```
 
 ## 🔐 Privacy and data controls
 
