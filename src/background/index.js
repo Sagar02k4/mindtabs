@@ -76,7 +76,7 @@ chrome.tabs.onCreated.addListener((tab) => {
 
 // ─── Reminders / Alarms ─────────────────────────────────────────
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+async function handleAlarm(alarm) {
   if (alarm.name === CLEANUP_ALARM) {
     const settings = await getSettings();
     const cutoff = Date.now() - (Number(settings.retentionDays) || CLEANUP_AFTER_DAYS) * 24 * 60 * 60 * 1000;
@@ -135,6 +135,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const updatedReminder = updatedReminders.find(r => r.id === reminderId);
   if (updatedReminder?.status === 'pending') await chrome.alarms.create(`reminder-${reminder.id}`, { when: updatedReminder.remindAt });
   await saveReminders(updatedReminders);
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  handleAlarm(alarm).catch((error) => {
+    console.error('MindTabs alarm handler failed:', error);
+  });
 });
 
 // Handle notification clicks
