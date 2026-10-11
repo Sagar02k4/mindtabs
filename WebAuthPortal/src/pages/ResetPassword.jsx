@@ -73,19 +73,23 @@ const ResetPassword = () => {
 
             <form onSubmit={handleReset} className="space-y-6">
               <div className="space-y-2 relative">
-                <label className="text-sm font-medium text-foreground">New Password</label>
+                <label htmlFor="new-password" className="text-sm font-medium text-foreground">New Password</label>
                 <div className="relative">
                   <input
+                    id="new-password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    autoComplete="new-password"
                     className="w-full h-12 pl-4 pr-12 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide new password' : 'Show new password'}
+                    aria-pressed={showPassword}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -94,7 +98,7 @@ const ResetPassword = () => {
               </div>
 
               {error && (
-                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-100">
+                <div role="alert" className="p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-100">
                   {error}
                 </div>
               )}
@@ -102,6 +106,7 @@ const ResetPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
+                aria-busy={loading}
                 className="w-full h-12 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {loading ? "Updating..." : "Update Password"}
