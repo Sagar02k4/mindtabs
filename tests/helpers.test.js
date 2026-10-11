@@ -5,6 +5,7 @@ import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringRemi
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
 import { retainTabsByPolicy } from '../src/utils/retention.js';
+import { isMatchingOAuthCallback } from '../src/utils/authSecurity.js';
 
 test('normalizeUrl groups tracking variants of one page', () => {
   assert.equal(
@@ -110,4 +111,11 @@ test('retention cleanup keeps archived and reminded tabs', () => {
   ];
   const retained = retainTabsByPolicy(tabs, [{ tabId: 'reminded', status: 'pending' }], 100);
   assert.deepEqual(retained.map(tab => tab.id), ['fresh', 'archived', 'reminded']);
+});
+
+test('OAuth callback validation requires the expected origin and path', () => {
+  const expected = 'https://extension.chromiumapp.org/callback';
+  assert.equal(isMatchingOAuthCallback(expected, `${expected}#access_token=token`), true);
+  assert.equal(isMatchingOAuthCallback(expected, 'https://evil.example/callback#access_token=token'), false);
+  assert.equal(isMatchingOAuthCallback(expected, 'https://extension.chromiumapp.org/other'), false);
 });

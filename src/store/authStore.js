@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured, SUPABASE_URL } from '../utils/supabase';
 import { getFromStorage, setToStorage, removeFromStorage } from '../utils/storage';
+import { isMatchingOAuthCallback } from '../utils/authSecurity';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 const AUTH_PORTAL_URL = import.meta.env.VITE_AUTH_PORTAL_URL || '';
@@ -112,9 +113,7 @@ const useAuthStore = create((set, get) => ({
         );
       });
 
-      const expectedRedirect = new URL(redirectUrl);
-      const receivedRedirect = new URL(responseUrl);
-      if (receivedRedirect.origin !== expectedRedirect.origin || receivedRedirect.pathname !== expectedRedirect.pathname) {
+      if (!isMatchingOAuthCallback(redirectUrl, responseUrl)) {
         throw new Error('OAuth callback did not match the extension redirect URL.');
       }
 
