@@ -160,7 +160,8 @@ export function getFaviconUrl(url) {
  * Generate a unique ID
  */
 export function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 export function getUserIdFromAccessToken(accessToken) {
