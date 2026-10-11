@@ -1,6 +1,6 @@
 import { shouldExcludeUrl, generateId, getUserIdFromAccessToken, normalizeUrl, isSafePageUrl, isBlockedDomain } from '../utils/helpers';
 import { CLEANUP_ALARM, CLEANUP_AFTER_DAYS } from '../utils/constants';
-import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getSettings } from '../utils/storage';
+import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getSettings, getDeletedTabs, saveDeletedTabs } from '../utils/storage';
 import { fullSync } from '../utils/syncService';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { scheduleReminderAlarms, advanceRecurringReminder, filterRemindersForTabs } from '../utils/reminders';
@@ -90,13 +90,15 @@ async function handleAlarm(alarm) {
   if (alarm.name === CLEANUP_ALARM) {
     const settings = await getSettings();
     const cutoff = Date.now() - (Number(settings.retentionDays) || CLEANUP_AFTER_DAYS) * 24 * 60 * 60 * 1000;
-    const [tabs, reminders] = await Promise.all([getAllTabs(), getAllReminders()]);
+    const [tabs, reminders, deletedTabs] = await Promise.all([getAllTabs(), getAllReminders(), getDeletedTabs()]);
     const retained = retainTabsByPolicy(tabs, reminders, cutoff);
     const retainedReminders = filterRemindersForTabs(reminders, retained);
+    const retainedDeletedTabs = deletedTabs.filter(item => Number(item.deletedAt) >= cutoff);
     if (retained.length !== tabs.length || retainedReminders.length !== reminders.length) {
       await saveData(retained, retainedReminders);
       await scheduleReminderAlarms(retainedReminders, chrome.alarms);
     }
+    if (retainedDeletedTabs.length !== deletedTabs.length) await saveDeletedTabs(retainedDeletedTabs);
     return;
   }
   if (alarm.name === 'sync-alarm') {
