@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage, getDeletedTabs } from './storage';
 import { mergeLists, mergeTabs } from './merge';
-import { isSafePageUrl, normalizeUrl } from './helpers';
+import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl } from './helpers';
 import { filterRemindersForTabs } from './reminders';
 
 export { mergeLists, mergeTabs } from './merge';
@@ -172,7 +172,7 @@ export async function pullFromCloud(userId) {
         id: ct.id,
         title: ct.title,
         url: normalizeUrl(ct.url),
-        favicon: ct.favicon,
+        favicon: sanitizeFaviconUrl(ct.favicon),
         tag: ct.tag,
         isArchived: Boolean(ct.is_archived),
         createdAt: ct.created_at,

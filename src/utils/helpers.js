@@ -72,6 +72,10 @@ export function isSafePageUrl(url) {
   }
 }
 
+export function sanitizeFaviconUrl(url) {
+  return isSafePageUrl(url) ? String(url) : null;
+}
+
 export function validateBackup(data) {
   if (!data || !Array.isArray(data.tabs) || !Array.isArray(data.reminders)) {
     throw new Error('Invalid MindTabs backup format.');
@@ -83,6 +87,7 @@ export function validateBackup(data) {
     ...tab,
     id: String(tab.id || generateId()),
     url: normalizeUrl(tab.url),
+    favicon: sanitizeFaviconUrl(tab.favicon),
     title: String(tab.title || 'Untitled').slice(0, 500),
     tag: tab.tag ? String(tab.tag).slice(0, 100) : null,
   })).filter((tab, index, list) => list.findIndex(candidate => candidate.id === tab.id) === index);

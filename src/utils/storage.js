@@ -1,7 +1,7 @@
 import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants';
 import { normalizeSettings } from './settings';
 import { normalizeWorkspaces } from './workspaces';
-import { isSafePageUrl, normalizeUrl } from './helpers';
+import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl } from './helpers';
 export { normalizeSettings } from './settings';
 
 /**
@@ -80,6 +80,7 @@ export async function getAllTabs() {
     id: String(tab.id || crypto.randomUUID()),
     title: typeof tab.title === 'string' ? tab.title : 'Untitled',
     url: typeof tab.url === 'string' ? normalizeUrl(tab.url) : '',
+    favicon: sanitizeFaviconUrl(tab.favicon),
     createdAt: Number(tab.createdAt) || Date.now(),
     lastVisited: Number(tab.lastVisited) || Number(tab.createdAt) || Date.now(),
     updatedAt: Number(tab.updatedAt) || Number(tab.lastVisited) || Number(tab.createdAt) || Date.now(),

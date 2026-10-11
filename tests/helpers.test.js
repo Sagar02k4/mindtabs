@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId } from '../src/utils/helpers.js';
+import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
@@ -41,6 +41,11 @@ test('favicon fallback does not disclose the tracked hostname', () => {
 
 test('generated identifiers use UUID entropy when available', () => {
   assert.match(generateId(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+});
+
+test('favicon metadata accepts only web URLs', () => {
+  assert.equal(sanitizeFaviconUrl('javascript:alert(1)'), null);
+  assert.equal(sanitizeFaviconUrl('https://cdn.example/icon.png'), 'https://cdn.example/icon.png');
 });
 
 test('backup validation removes unsafe and orphaned records', () => {
