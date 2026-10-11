@@ -8,6 +8,7 @@ export default function UserMenu() {
   const { user, isAuthenticated, signOut } = useAuthStore();
   const [open, setOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle');
   const [lastSync, setLastSync] = useState(null);
   const [syncMessage, setSyncMessage] = useState('');
   const menuRef = useRef(null);
@@ -34,8 +35,10 @@ export default function UserMenu() {
     setSyncMessage('Syncing…');
     try {
       const result = await fullSync(user.id);
+      setSyncStatus(result.success ? 'success' : 'error');
       setSyncMessage(result.success ? 'Sync completed.' : (result.error || 'Sync failed. Local data is safe.'));
     } catch (error) {
+      setSyncStatus('error');
       setSyncMessage(error instanceof Error ? error.message : 'Sync failed. Local data is safe.');
     } finally {
       setSyncing(false);
@@ -56,6 +59,7 @@ export default function UserMenu() {
   return (
     <div className="relative" ref={menuRef}>
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         aria-label={`Account menu for ${userEmail}`}
         aria-haspopup="menu"
@@ -76,6 +80,8 @@ export default function UserMenu() {
         <div className="flex items-center gap-1">
           {syncing ? (
             <RefreshCw size={12} className="text-primary-400 animate-spin" />
+          ) : syncStatus === 'error' ? (
+            <CloudOff size={12} className="text-amber-400" />
           ) : (
             <Cloud size={12} className="text-emerald-400" />
           )}
@@ -108,6 +114,7 @@ export default function UserMenu() {
 
           {/* Actions */}
           <button
+            type="button"
             onClick={handleSync}
             disabled={syncing}
             aria-busy={syncing}
@@ -118,9 +125,10 @@ export default function UserMenu() {
             {syncing ? 'Syncing...' : 'Sync Now'}
           </button>
 
-          {syncMessage && <p role="status" className="px-3 py-2 text-[11px] text-surface-400">{syncMessage}</p>}
+          {syncMessage && <p role={syncStatus === 'error' ? 'alert' : 'status'} className={`px-3 py-2 text-[11px] ${syncStatus === 'error' ? 'text-amber-300' : 'text-surface-400'}`}>{syncMessage}</p>}
 
           <button
+            type="button"
             onClick={handleSignOut}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm
                       hover:bg-red-500/10 text-surface-300 hover:text-red-400 transition-colors"
