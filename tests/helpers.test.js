@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup } from '../src/utils/helpers.js';
-import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder } from '../src/utils/reminders.js';
+import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
 
@@ -77,6 +77,12 @@ test('recurring reminders advance to the next future occurrence', () => {
     id: 'r', remindAt: base + 3 * 86400000, repeat: 'daily', status: 'pending', updatedAt: base + 2 * 86400000
   });
   assert.equal(advanceRecurringReminder({ remindAt: base, repeat: null, status: 'pending' }, base).status, 'completed');
+});
+
+test('reminder times must be finite and in the future', () => {
+  assert.equal(isValidReminderTime(200, 100), true);
+  assert.equal(isValidReminderTime(100, 100), false);
+  assert.equal(isValidReminderTime('invalid', 100), false);
 });
 
 test('settings normalization clamps unsafe values and removes invalid domains', () => {

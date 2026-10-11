@@ -3,7 +3,7 @@ import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFrom
 import { generateId, getUserIdFromAccessToken, normalizeUrl, validateBackup, isSafePageUrl } from '../utils/helpers';
 import { FREE_LIMITS } from '../utils/constants';
 import { pushToCloud } from '../utils/syncService';
-import { scheduleReminderAlarms } from '../utils/reminders';
+import { scheduleReminderAlarms, isValidReminderTime } from '../utils/reminders';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 
@@ -141,7 +141,15 @@ const useTabStore = create((set, get) => ({
 
   // Reminder actions
   setReminder: async (tabId, remindAt, repeat = null) => {
-    const { reminders } = get();
+    const { reminders, tabs } = get();
+    if (!tabs.some(tab => tab.id === tabId)) {
+      set({ actionError: 'That saved page is no longer available.' });
+      return null;
+    }
+    if (!isValidReminderTime(remindAt)) {
+      set({ actionError: 'Choose a reminder time in the future.' });
+      return null;
+    }
     // Remove existing reminder for this tab
     const filtered = reminders.filter(r => r.tabId !== tabId);
     if (filtered.length >= FREE_LIMITS.MAX_REMINDERS) {

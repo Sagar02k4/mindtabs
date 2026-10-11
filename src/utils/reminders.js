@@ -2,6 +2,11 @@ export function getFuturePendingReminders(reminders, now = Date.now()) {
   return (Array.isArray(reminders) ? reminders : []).filter(reminder => reminder.status === 'pending' && Number(reminder.remindAt) > now);
 }
 
+export function isValidReminderTime(remindAt, now = Date.now()) {
+  const timestamp = Number(remindAt);
+  return Number.isFinite(timestamp) && timestamp > now;
+}
+
 export function getNextReminderTime(reminder) {
   const base = Number(reminder?.remindAt);
   if (!Number.isFinite(base) || !['daily', 'weekly'].includes(reminder?.repeat)) return null;
