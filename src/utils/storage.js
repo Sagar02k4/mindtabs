@@ -68,7 +68,8 @@ export async function clearAllStorage() {
       });
     });
   }
-  localStorage.clear();
+  // Never clear the entire origin: other apps may share the same localStorage.
+  Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key));
 }
 
 export async function getAllTabs() {
