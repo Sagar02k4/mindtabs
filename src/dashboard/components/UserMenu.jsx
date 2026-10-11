@@ -18,6 +18,15 @@ export default function UserMenu() {
     getLastSyncTime().then(setLastSync);
   }, [syncing]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
   // Close menu on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -92,7 +101,7 @@ export default function UserMenu() {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 glass rounded-xl p-2 min-w-[220px]
+        <div role="menu" aria-label="Account actions" className="absolute right-0 top-full mt-2 z-50 glass rounded-xl p-2 min-w-[220px]
                       animate-scale-in shadow-xl shadow-black/40">
           {/* User info */}
           <div className="px-3 py-2 mb-1 border-b border-surface-700/50">
@@ -115,6 +124,7 @@ export default function UserMenu() {
           {/* Actions */}
           <button
             type="button"
+            role="menuitem"
             onClick={handleSync}
             disabled={syncing}
             aria-busy={syncing}
@@ -129,6 +139,7 @@ export default function UserMenu() {
 
           <button
             type="button"
+            role="menuitem"
             onClick={handleSignOut}
             className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm
                       hover:bg-red-500/10 text-surface-300 hover:text-red-400 transition-colors"
