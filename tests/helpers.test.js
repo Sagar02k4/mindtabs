@@ -142,8 +142,8 @@ test('settings normalization clamps unsafe values and removes invalid domains', 
   assert.deepEqual(settings.blockedDomains, ['example.com']);
 });
 
-test('workspace normalization removes malformed records and duplicate tab ids', () => {
-  const result = normalizeWorkspaces([{ id: 'w1', name: '  Focus  ', tabIds: ['a', 'a', '', 2] }, { id: '', tabIds: ['x'] }, null]);
+test('workspace normalization removes malformed records and duplicate ids', () => {
+  const result = normalizeWorkspaces([{ id: 'w1', name: '  Focus  ', tabIds: ['a', 'a', '', 2] }, { id: 'w1', name: 'Duplicate', tabIds: ['b'] }, { id: '', tabIds: ['x'] }, null]);
   assert.equal(result.length, 1);
   assert.equal(result[0].name, 'Focus');
   assert.deepEqual(result[0].tabIds, ['a', '2']);

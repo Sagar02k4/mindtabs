@@ -6,5 +6,6 @@ export function normalizeWorkspaces(value) {
     tabIds: Array.isArray(workspace.tabIds) ? [...new Set(workspace.tabIds.map(String).filter(Boolean))].slice(0, 1000) : [],
     createdAt: Number(workspace.createdAt) || Date.now(),
     updatedAt: Number(workspace.updatedAt) || Number(workspace.createdAt) || Date.now(),
-  })).filter(workspace => workspace.id && workspace.tabIds.length > 0);
+  })).filter(workspace => workspace.id && workspace.tabIds.length > 0)
+    .filter((workspace, index, list) => list.findIndex(candidate => candidate.id === workspace.id) === index);
 }
