@@ -27,11 +27,28 @@ async function withRetry(operation, attempts = 3) {
 async function withSyncLock(operation) {
   const storage = typeof chrome !== 'undefined' && chrome.storage?.session ? chrome.storage.session : null;
   if (!storage) return operation();
-  const existing = await new Promise(resolve => storage.get([SYNC_LOCK_KEY], result => resolve(result[SYNC_LOCK_KEY])));
+  const readLock = () => new Promise((resolve, reject) => storage.get([SYNC_LOCK_KEY], result => {
+    if (chrome.runtime?.lastError) {
+      reject(new Error(chrome.runtime.lastError.message));
+      return;
+    }
+    resolve(result[SYNC_LOCK_KEY]);
+  }));
+  const writeLock = (lock) => new Promise((resolve, reject) => storage.set({ [SYNC_LOCK_KEY]: lock }, () => {
+    if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
+    else resolve();
+  }));
+  const removeLock = () => new Promise((resolve, reject) => storage.remove([SYNC_LOCK_KEY], () => {
+    if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
+    else resolve();
+  }));
+  const existing = await readLock();
   if (existing && existing.expiresAt > Date.now()) return { success: false, error: 'Another sync is already running.' };
   const lock = { expiresAt: Date.now() + 30000 };
-  await new Promise(resolve => storage.set({ [SYNC_LOCK_KEY]: lock }, resolve));
-  try { return await operation(); } finally { await new Promise(resolve => storage.remove([SYNC_LOCK_KEY], resolve)); }
+  await writeLock(lock);
+  try { return await operation(); } finally {
+    try { await removeLock(); } catch (error) { console.warn('Could not release sync lock:', error); }
+  }
 }
 
 async function fetchAllUserRows(table, userId) {
