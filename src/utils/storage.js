@@ -155,7 +155,7 @@ export async function getSettings() {
 }
 
 export async function saveSettings(settings) {
-  await setToStorage(STORAGE_KEYS.SETTINGS, settings);
+  await setToStorage(STORAGE_KEYS.SETTINGS, normalizeSettings(settings));
 }
 
 export async function getWorkspaces() {
