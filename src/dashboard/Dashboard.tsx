@@ -6,6 +6,7 @@ import useAuthStore from '../store/authStore';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
 import { getSettings, saveSettings, getWorkspaces } from '../utils/storage';
+import { normalizeSettings } from '../utils/settings';
 import { encryptBackup, decryptBackup, parseCsvBackup } from '../utils/helpers';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
@@ -85,7 +86,7 @@ function DashboardContent() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mindtabs-backup.${csv ? 'csv' : 'json'}`; a.click(); URL.revokeObjectURL(a.href);
   };
   const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); return; } if (!window.confirm('Import this backup and merge it with your current data?')) return; const reader = new FileReader(); reader.onload = async () => { try { const text = String(reader.result); let parsed = file.name.toLowerCase().endsWith('.csv') ? parseCsvBackup(text) : JSON.parse(text); if (parsed.format === 'mindtabs-encrypted-backup') { const password = window.prompt('Enter the backup password.'); if (!password) return; parsed = await decryptBackup(parsed, password); } await useTabStore.getState().importData(parsed); setSyncMessage('Backup imported and merged successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
-  const updateSettings = async (next) => { const merged = { ...settings, ...next }; setSettings(merged); await saveSettings(merged); const browser = (globalThis as any).chrome; if (browser?.alarms) { if (next.syncIntervalMinutes) browser.alarms.create('sync-alarm', { periodInMinutes: Math.max(1, Number(merged.syncIntervalMinutes)) }); if (next.retentionDays) browser.alarms.create('weekly-cleanup', { periodInMinutes: 7 * 24 * 60 }); } setSyncMessage('Settings saved.'); };
+  const updateSettings = async (next) => { const merged = normalizeSettings({ ...settings, ...next }); setSettings(merged); await saveSettings(merged); const browser = (globalThis as any).chrome; if (browser?.alarms) { if (next.syncIntervalMinutes) browser.alarms.create('sync-alarm', { periodInMinutes: merged.syncIntervalMinutes }); if (next.retentionDays) browser.alarms.create('weekly-cleanup', { periodInMinutes: 7 * 24 * 60 }); } setSyncMessage('Settings saved.'); };
   const completeOnboarding = async (tracking) => { await updateSettings({ tracking, onboardingComplete: true }); };
   const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank', 'noopener,noreferrer'); });
   const saveWorkspace = async () => { if (!selected.size) { setSyncMessage('Select tabs before saving a workspace.'); return; } const name = window.prompt('Workspace name'); if (name) { const workspace = await useTabStore.getState().saveWorkspace(name, [...selected]); setWorkspaces(current => [...current, workspace]); setSyncMessage(`Workspace “${workspace.name}” saved.`); } };
