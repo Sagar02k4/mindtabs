@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, Trash2, Bell, Tag, Clock, MoreVertical, X, FolderInput, Archive, XCircle } from 'lucide-react';
 import useTabStore from '../../store/tabStore';
 import TagBadge from '../../components/TagBadge';
@@ -13,9 +13,20 @@ export default function TabCard({ tab, index }) {
   const [customDateTime, setCustomDateTime] = useState('');
   const [repeat, setRepeat] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const cancelDeleteRef = useRef(null);
   const { updateTag, removeTab, setReminder, resetReminder, getReminderForTab, toggleArchive } = useTabStore();
 
   const reminder = getReminderForTab(tab.id);
+
+  useEffect(() => {
+    if (!showDeleteConfirm) return undefined;
+    cancelDeleteRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setShowDeleteConfirm(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showDeleteConfirm]);
 
   const handleOpenTab = () => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -195,7 +206,7 @@ export default function TabCard({ tab, index }) {
             <h3 id={`delete-tab-title-${tab.id}`} className="font-semibold text-surface-100">Delete this saved page?</h3>
             <p className="text-sm text-surface-400 mt-2">{reminder ? 'This tab has a reminder. Delete the tab and its reminder?' : 'This cannot be undone.'}</p>
             <div className="flex justify-end gap-2 mt-5">
-              <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>No</button>
+              <button ref={cancelDeleteRef} className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>No</button>
               <button className="btn-danger" onClick={() => { removeTab(tab.id); setShowDeleteConfirm(false); }}>Yes, delete</button>
             </div>
           </div>
