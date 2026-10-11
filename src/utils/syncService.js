@@ -54,7 +54,7 @@ async function withSyncLock(operation) {
 async function fetchAllUserRows(table, userId) {
   const rows = [];
   for (let offset = 0; offset < CLOUD_MAX_ROWS; offset += CLOUD_PAGE_SIZE) {
-    const { data, error } = await supabase.from(table).select('*').eq('user_id', userId).range(offset, offset + CLOUD_PAGE_SIZE - 1);
+    const { data, error } = await supabase.from(table).select('*').eq('user_id', userId).order('id', { ascending: true }).range(offset, offset + CLOUD_PAGE_SIZE - 1);
     if (error) throw error;
     rows.push(...(data || []));
     if (!data || data.length < CLOUD_PAGE_SIZE) return rows;
