@@ -6,6 +6,8 @@ export { mergeLists } from './merge';
 
 const LAST_SYNC_KEY = 'mindtabs_last_sync';
 const SYNC_LOCK_KEY = 'mindtabs_sync_lock';
+const CLOUD_PAGE_SIZE = 500;
+const CLOUD_MAX_ROWS = 10000;
 let syncQueue = Promise.resolve();
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,6 +30,17 @@ async function withSyncLock(operation) {
   const lock = { expiresAt: Date.now() + 30000 };
   await new Promise(resolve => storage.set({ [SYNC_LOCK_KEY]: lock }, resolve));
   try { return await operation(); } finally { await new Promise(resolve => storage.remove([SYNC_LOCK_KEY], resolve)); }
+}
+
+async function fetchAllUserRows(table, userId) {
+  const rows = [];
+  for (let offset = 0; offset < CLOUD_MAX_ROWS; offset += CLOUD_PAGE_SIZE) {
+    const { data, error } = await supabase.from(table).select('*').eq('user_id', userId).range(offset, offset + CLOUD_PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < CLOUD_PAGE_SIZE) return rows;
+  }
+  throw new Error(`Cloud ${table} data exceeds the safety limit of ${CLOUD_MAX_ROWS} records.`);
 }
 
 /**
@@ -132,23 +145,19 @@ export async function pullFromCloud(userId) {
   if (!isSupabaseConfigured() || !userId) return { success: false, error: 'Cloud sync is not configured or you are signed out.' };
 
   try {
-    const [tabsResult, remindersResult] = await Promise.all([
-      supabase.from('tabs').select('*').eq('user_id', userId),
-      supabase.from('reminders').select('*').eq('user_id', userId),
+    const [cloudTabs, cloudReminders] = await Promise.all([
+      fetchAllUserRows('tabs', userId),
+      fetchAllUserRows('reminders', userId),
     ]);
-    if (tabsResult.error) throw tabsResult.error;
-    if (remindersResult.error) throw remindersResult.error;
-    const { data: cloudTabs } = tabsResult;
-    const { data: cloudReminders } = remindersResult;
 
     const localTabs = await getAllTabs();
     const localReminders = await getAllReminders();
-    const cloudDeletedIds = new Set((cloudTabs || []).filter(tab => tab.deleted_at).map(tab => tab.id));
+    const cloudDeletedIds = new Set(cloudTabs.filter(tab => tab.deleted_at).map(tab => tab.id));
 
     // Merge tabs (last-write-wins based on last_visited / createdAt)
     const mergedTabs = mergeLists(
       localTabs.filter(tab => !cloudDeletedIds.has(tab.id)),
-      (cloudTabs || []).filter(ct => !ct.deleted_at).map(ct => ({
+      cloudTabs.filter(ct => !ct.deleted_at).map(ct => ({
         id: ct.id,
         title: ct.title,
         url: ct.url,
@@ -168,7 +177,7 @@ export async function pullFromCloud(userId) {
     // Merge reminders (last-write-wins based on createdAt)
     const mergedReminders = mergeLists(
       localReminders,
-      (cloudReminders || []).map(cr => ({
+      cloudReminders.map(cr => ({
         id: cr.id,
         tabId: cr.tab_id,
         remindAt: cr.remind_at,
