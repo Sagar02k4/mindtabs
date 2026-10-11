@@ -129,7 +129,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground dark">
+    <div className={`min-h-screen bg-background text-foreground ${settings.theme === 'dark' ? 'dark' : ''}`}>
       <Header onSignIn={() => navigate('/login')} />
 
       <main className="grow pb-16">
@@ -163,6 +163,7 @@ function DashboardContent() {
               {workspaces.length > 0 && <select className="btn-secondary" aria-label="Open saved workspace" defaultValue="" onChange={e => { const workspace = workspaces.find(item => item.id === e.target.value); if (workspace) restoreWorkspace(workspace); e.target.value = ''; }}><option value="">Workspaces</option>{workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select>}
             </div>
             {showSettings && <div className="glass rounded-xl p-4 mb-6 grid gap-3 md:grid-cols-4 text-sm">
+              <label>Theme <select className="input-field ml-2" value={settings.theme} onChange={e => updateSettings({ theme: e.target.value })}><option value="dark">Dark</option><option value="light">Light</option></select></label>
               <label><input type="checkbox" checked={settings.tracking} onChange={e => updateSettings({ tracking: e.target.checked })} /> Track tabs</label>
               <label><input type="checkbox" checked={settings.notifications} onChange={e => updateSettings({ notifications: e.target.checked })} /> Notifications</label>
               <label>Retention days <input className="input-field w-20 ml-2" type="number" min="7" value={settings.retentionDays} onChange={e => updateSettings({ retentionDays: Number(e.target.value) })} /></label>
