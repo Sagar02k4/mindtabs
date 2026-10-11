@@ -1,8 +1,16 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import Button from '../../components/Button';
 
 export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, message }) {
+  const closeButtonRef = useRef(null);
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
   if (!isOpen) return null;
 
   return (
@@ -16,6 +24,8 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, 
       {/* Modal */}
       <div role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title" className="relative glass rounded-2xl p-6 max-w-md w-full animate-scale-in shadow-2xl shadow-black/50">
         <button
+          ref={closeButtonRef}
+          aria-label="Close delete confirmation"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-surface-700/50 
                     text-surface-400 hover:text-surface-200 transition-colors"

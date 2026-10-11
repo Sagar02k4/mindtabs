@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Bell, Clock, X } from 'lucide-react';
 import Button from '../../components/Button';
 import { REMINDER_PRESETS } from '../../utils/constants';
@@ -8,6 +8,15 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
   const [customDateTime, setCustomDateTime] = useState('');
   const [selectedPreset, setSelectedPreset] = useState(null);
   const { setReminder } = useTabStore();
+
+  const closeButtonRef = useRef(null);
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !tab) return null;
 
@@ -38,6 +47,8 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
       
       <div role="dialog" aria-modal="true" aria-labelledby="reminder-dialog-title" className="relative glass rounded-2xl p-6 max-w-sm w-full animate-scale-in shadow-2xl shadow-black/50">
         <button
+          ref={closeButtonRef}
+          aria-label="Close reminder dialog"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-surface-700/50 
                     text-surface-400 hover:text-surface-200 transition-colors"
@@ -76,6 +87,7 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
             Custom Time
           </label>
           <input 
+            aria-label="Reminder date and time"
             type="datetime-local"
             value={customDateTime}
             onChange={(e) => setCustomDateTime(e.target.value)}
