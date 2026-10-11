@@ -60,6 +60,10 @@ BEGIN
     ALTER TABLE reminders ADD CONSTRAINT reminders_repeat_check
       CHECK (repeat IS NULL OR repeat IN ('daily', 'weekly'));
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reminders_remind_at_positive_check') THEN
+    ALTER TABLE reminders ADD CONSTRAINT reminders_remind_at_positive_check
+      CHECK (remind_at > 0);
+  END IF;
 END $$;
 
 -- Prevent a user from attaching a reminder to another user's tab. RLS on the
