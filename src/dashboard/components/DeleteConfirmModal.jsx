@@ -14,7 +14,7 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, 
       />
       
       {/* Modal */}
-      <div className="relative glass rounded-2xl p-6 max-w-md w-full animate-scale-in shadow-2xl shadow-black/50">
+      <div role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title" className="relative glass rounded-2xl p-6 max-w-md w-full animate-scale-in shadow-2xl shadow-black/50">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-surface-700/50 
@@ -29,7 +29,7 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, 
             <AlertTriangle size={24} className="text-red-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-surface-100">{title || 'Confirm Delete'}</h3>
+            <h3 id="delete-dialog-title" className="text-lg font-semibold text-surface-100">{title || 'Confirm Delete'}</h3>
             <p className="text-sm text-surface-400 mt-1">
               {message || 'This action cannot be undone. Are you sure you want to proceed?'}
             </p>

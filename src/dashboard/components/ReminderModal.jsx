@@ -36,7 +36,7 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
         onClick={onClose}
       />
       
-      <div className="relative glass rounded-2xl p-6 max-w-sm w-full animate-scale-in shadow-2xl shadow-black/50">
+      <div role="dialog" aria-modal="true" aria-labelledby="reminder-dialog-title" className="relative glass rounded-2xl p-6 max-w-sm w-full animate-scale-in shadow-2xl shadow-black/50">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-surface-700/50 
@@ -51,7 +51,7 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
             <Bell size={20} className="text-amber-400" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-surface-100">Set Reminder</h3>
+            <h3 id="reminder-dialog-title" className="text-base font-semibold text-surface-100">Set Reminder</h3>
             <p className="text-xs text-surface-400 truncate max-w-[200px]">{tab.title}</p>
           </div>
         </div>

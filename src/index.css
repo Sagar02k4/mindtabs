@@ -178,6 +178,11 @@
            focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-950;
   }
 
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid theme('colors.cyan.300');
+    outline-offset: 2px;
+  }
+
   .btn-ghost {
     @apply text-surface-400 px-3 py-2 rounded-lg
            font-medium text-sm transition-all duration-200

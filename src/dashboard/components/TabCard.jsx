@@ -112,6 +112,7 @@ export default function TabCard({ tab, index }) {
             onClick={() => toggleArchive(tab.id)}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-purple-400 transition-colors"
             title={tab.isArchived ? "Unarchive" : "Archive"}
+            aria-label={tab.isArchived ? "Unarchive saved page" : "Archive saved page"}
           >
             <Archive size={14} />
           </button>
@@ -119,6 +120,7 @@ export default function TabCard({ tab, index }) {
             onClick={() => { setShowReminderPicker(!showReminderPicker); setShowTagPicker(false); }}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-amber-400 transition-colors"
             title={reminder ? "Reset Reminder" : "Set Reminder"}
+            aria-label={reminder ? "Reset reminder" : "Set reminder"}
           >
             <Bell size={14} />
           </button>
@@ -126,6 +128,7 @@ export default function TabCard({ tab, index }) {
             onClick={handleCloseChromeTab}
             className="p-2 rounded-lg hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
             title="Close Tab in Browser"
+            aria-label="Close this page in the browser"
           >
             <XCircle size={14} />
           </button>
@@ -133,6 +136,7 @@ export default function TabCard({ tab, index }) {
             onClick={() => setShowDeleteConfirm(true)}
             className="p-2 rounded-lg hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
             title="Delete from Dashboard"
+            aria-label="Delete saved page"
           >
             <Trash2 size={14} />
           </button>
