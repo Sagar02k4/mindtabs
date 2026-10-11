@@ -57,6 +57,11 @@ function DashboardContent() {
     }
   }, [isAuthenticated]);
   useEffect(() => setPage(1), [searchQuery, activeTag]);
+  useEffect(() => setPage(current => Math.min(current, pageCount)), [pageCount]);
+  useEffect(() => {
+    const validIds = new Set(tabs.map(tab => tab.id));
+    setSelected(current => new Set([...current].filter(id => validIds.has(id))));
+  }, [tabs]);
 
   const handleRefresh = async () => {
     if (isAuthenticated && user) {
