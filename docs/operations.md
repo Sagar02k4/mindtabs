@@ -18,6 +18,20 @@ npm audit --audit-level=high || true # report development-only advisories withou
 
 Apply `supabase_schema.sql` in a controlled environment. The policy statements are rerunnable, but production changes should still be reviewed and backed up first. Verify RLS is enabled on both `tabs` and `reminders`.
 
+After applying the schema, verify the database protections before enabling cloud sync:
+
+```sql
+select relname, relrowsecurity
+from pg_class
+where relname in ('tabs', 'reminders');
+
+select tgname
+from pg_trigger
+where tgname = 'reminders_tab_owner_trigger';
+```
+
+The migration adds same-user reminder ownership enforcement, rejects non-web tab URLs, restricts recurrence values to `daily`/`weekly`, and requires positive reminder timestamps. If an existing database contains rows that violate these constraints, clean them through a reviewed migration before retrying; do not disable the constraints to force deployment.
+
 ## Sync incident
 
 1. Confirm the local dashboard still shows the user's records.
