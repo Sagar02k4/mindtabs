@@ -198,11 +198,12 @@ const useTabStore = create((set, get) => ({
     }
   },
 
-  resetReminder: async (tabId, remindAt, repeat = null) => {
+  resetReminder: async (tabId, remindAt, repeat) => {
     const { reminders } = get();
     const current = reminders.find(r => r.tabId === tabId && r.status === 'pending');
+    const nextRepeat = repeat === undefined ? (current?.repeat || null) : repeat;
     if (current) await get().clearReminder(current.id);
-    return get().setReminder(tabId, remindAt, repeat);
+    return get().setReminder(tabId, remindAt, nextRepeat);
   },
 
   // Filter / search
