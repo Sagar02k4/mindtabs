@@ -81,12 +81,24 @@ export function validateBackup(data) {
   }
   const tabs = data.tabs.filter(tab => tab && typeof tab === 'object' && isSafePageUrl(tab.url)).map(tab => ({
     ...tab,
+    id: String(tab.id || generateId()),
     url: normalizeUrl(tab.url),
     title: String(tab.title || 'Untitled').slice(0, 500),
     tag: tab.tag ? String(tab.tag).slice(0, 100) : null,
-  }));
+  })).filter((tab, index, list) => list.findIndex(candidate => candidate.id === tab.id) === index);
   const tabIds = new Set(tabs.map(tab => String(tab.id)));
-  const reminders = data.reminders.filter(reminder => reminder && typeof reminder === 'object' && tabIds.has(String(reminder.tabId)) && Number(reminder.remindAt) > 0);
+  const reminders = data.reminders.filter(reminder => (
+    reminder && typeof reminder === 'object' && tabIds.has(String(reminder.tabId))
+    && Number.isFinite(Number(reminder.remindAt)) && Number(reminder.remindAt) > 0
+  )).map(reminder => ({
+    id: String(reminder.id || generateId()),
+    tabId: String(reminder.tabId),
+    remindAt: Number(reminder.remindAt),
+    status: ['pending', 'completed', 'cancelled'].includes(reminder.status) ? reminder.status : 'pending',
+    createdAt: Number(reminder.createdAt) || Date.now(),
+    updatedAt: Number(reminder.updatedAt) || Number(reminder.createdAt) || Date.now(),
+    repeat: ['daily', 'weekly'].includes(reminder.repeat) ? reminder.repeat : null,
+  })).filter((reminder, index, list) => list.findIndex(candidate => candidate.id === reminder.id) === index);
   return { tabs, reminders };
 }
 
