@@ -115,6 +115,29 @@ export async function decryptBackup(envelope, password) {
   }
 }
 
+export function parseCsvBackup(csv) {
+  const lines = String(csv).trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error('CSV backup is empty.');
+  const parseLine = line => {
+    const values = []; let value = ''; let quoted = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const char = line[i];
+      if (char === '"' && line[i + 1] === '"' && quoted) { value += '"'; i += 1; }
+      else if (char === '"') quoted = !quoted;
+      else if (char === ',' && !quoted) { values.push(value); value = ''; }
+      else value += char;
+    }
+    values.push(value);
+    return values;
+  };
+  const headers = parseLine(lines[0]).map(header => header.trim().toLowerCase());
+  const titleIndex = headers.indexOf('title'); const urlIndex = headers.indexOf('url');
+  if (titleIndex < 0 || urlIndex < 0) throw new Error('CSV must contain title and url columns.');
+  const tagIndex = headers.indexOf('tag'); const archivedIndex = headers.indexOf('archived');
+  const tabs = lines.slice(1).filter(Boolean).map((line, index) => { const values = parseLine(line); const now = Date.now() + index; return { id: `csv-${now}-${index}`, title: values[titleIndex], url: values[urlIndex], tag: tagIndex >= 0 ? values[tagIndex] || null : null, isArchived: archivedIndex >= 0 && /^(yes|true|1)$/i.test(values[archivedIndex]), createdAt: now, lastVisited: now, updatedAt: now, tagUpdatedAt: now, archiveUpdatedAt: now }; });
+  return { version: 1, tabs, reminders: [] };
+}
+
 /**
  * Get favicon URL for a given page URL
  */

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup } from '../src/utils/helpers.js';
+import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms } from '../src/utils/reminders.js';
 
 test('normalizeUrl groups tracking variants of one page', () => {
@@ -48,4 +48,12 @@ test('alarm restoration schedules only future pending reminders', async () => {
   const reminders = [{ id: 'past', status: 'pending', remindAt: 10 }, { id: 'future', status: 'pending', remindAt: 200 }, { id: 'done', status: 'completed', remindAt: 300 }];
   assert.deepEqual(getFuturePendingReminders(reminders, 100).map(item => item.id), ['future']);
   assert.equal(await scheduleReminderAlarms(reminders, alarms, 100), 1);
+});
+
+test('CSV backups round-trip quoted titles and reject unsafe URLs through validation', () => {
+  const parsed = parseCsvBackup('title,url,tag,archived\n"A, useful page",https://example.com,work,no');
+  assert.equal(parsed.tabs[0].title, 'A, useful page');
+  assert.equal(validateBackup(parsed).tabs.length, 1);
+  const unsafe = parseCsvBackup('title,url\nBad,javascript:alert(1)');
+  assert.equal(validateBackup(unsafe).tabs.length, 0);
 });
