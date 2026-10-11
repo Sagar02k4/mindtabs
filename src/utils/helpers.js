@@ -230,7 +230,7 @@ export function isBlockedDomain(url, blockedDomains = []) {
   try {
     const hostname = new URL(url).hostname.toLowerCase();
     return blockedDomains.some(domain => {
-      const normalized = String(domain).trim().toLowerCase().replace(/^\.+/, '');
+      const normalized = normalizeBlockedDomain(domain);
       return normalized && (hostname === normalized || hostname.endsWith(`.${normalized}`));
     });
   } catch {
