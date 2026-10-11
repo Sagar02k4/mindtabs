@@ -125,7 +125,7 @@ export async function pushToCloud(userId) {
         .map(ct => ct.id);
 
       if (toDelete.length > 0) {
-        const { error } = await supabase.from('tabs').delete().in('id', toDelete);
+        const { error } = await supabase.from('tabs').delete().eq('user_id', userId).in('id', toDelete);
         if (error) throw error;
       }
     }
@@ -137,7 +137,7 @@ export async function pushToCloud(userId) {
       .filter(cr => !localReminderIds.includes(cr.id))
       .map(cr => cr.id);
     if (remindersToDelete.length > 0) {
-      const { error } = await supabase.from('reminders').delete().in('id', remindersToDelete);
+      const { error } = await supabase.from('reminders').delete().eq('user_id', userId).in('id', remindersToDelete);
       if (error) throw error;
     }
 
