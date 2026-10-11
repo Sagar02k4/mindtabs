@@ -39,7 +39,7 @@ export function Header({ onSignIn }: { onSignIn?: () => void }) {
 		>
 			<nav className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-6">
 				<div className="flex items-center gap-5">
-					<a href="#" className="flex flex-row items-center gap-2 hover:bg-accent rounded-md p-2">
+					<a href="/" aria-label="MindTabs home" className="flex flex-row items-center gap-2 hover:bg-accent rounded-md p-2">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-cyan flex items-center justify-center shadow-lg shadow-primary-500/25">
                           <Sparkles size={16} className="text-white" />
                         </div>
@@ -82,10 +82,10 @@ export function Header({ onSignIn }: { onSignIn?: () => void }) {
 			<MobileMenu open={open} className="flex flex-col justify-between gap-2 overflow-y-auto">
 				<NavigationMenu className="max-w-full">
 					<div className="flex w-full flex-col gap-y-2 pb-4">
-                        <a href="https://github.com/Sagar02k4/MindTabs" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent">
+                        <a href="https://github.com/Sagar02k4/MindTabs" target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setOpen(false)}>
                             <Github size={18} /> GitHub
                         </a>
-                        <a href="#" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent">
+                        <a href="https://github.com/Sagar02k4/MindTabs/issues" target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setOpen(false)}>
                             <LifeBuoy size={18} /> Support
                         </a>
 					</div>
