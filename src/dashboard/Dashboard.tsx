@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { Sparkles, Trash2, RefreshCw, AlertCircle, Download, Upload, FolderOpen, Bell, Settings } from 'lucide-react';
 import useTabStore from '../store/tabStore';
@@ -20,7 +20,7 @@ import AuthPage from './components/AuthPage';
 
 function DashboardContent() {
   const navigate = useNavigate();
-  const { tabs, reminders, lastDeleted, undoLastDelete, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, activeTag, actionError, clearActionError } = useTabStore();
+  const { tabs, reminders, lastDeleted, undoLastDelete, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, activeTag, sortBy, actionError, clearActionError } = useTabStore();
   const { isAuthenticated, user, loading: authLoading, restoreSession } = useAuthStore();
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -31,7 +31,7 @@ function DashboardContent() {
   const [settings, setSettings] = useState({ theme: 'dark', tracking: false, notifications: true, onboardingComplete: false, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const pageSize = 20;
-  const filteredTabs = getFilteredTabs();
+  const filteredTabs = useMemo(() => getFilteredTabs(), [getFilteredTabs, tabs, searchQuery, activeTag, sortBy]);
   const pageCount = Math.max(1, Math.ceil(filteredTabs.length / pageSize));
   const visibleTabs = filteredTabs.slice((page - 1) * pageSize, page * pageSize);
 
