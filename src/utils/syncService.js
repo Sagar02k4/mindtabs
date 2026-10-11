@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage, getDeletedTabs } from './storage';
 import { mergeLists, mergeTabs } from './merge';
-import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl, normalizeCloudReminder } from './helpers';
+import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl, normalizeCloudReminder, generateId } from './helpers';
 import { filterRemindersForTabs } from './reminders';
 
 export { mergeLists, mergeTabs } from './merge';
@@ -38,16 +38,20 @@ async function withSyncLock(operation) {
     if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
     else resolve();
   }));
-  const removeLock = () => new Promise((resolve, reject) => storage.remove([SYNC_LOCK_KEY], () => {
-    if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
-    else resolve();
-  }));
+  const removeLock = async (token) => {
+    const current = await readLock();
+    if (current?.token !== token) return;
+    await new Promise((resolve, reject) => storage.remove([SYNC_LOCK_KEY], () => {
+      if (chrome.runtime?.lastError) reject(new Error(chrome.runtime.lastError.message));
+      else resolve();
+    }));
+  };
   const existing = await readLock();
   if (existing && existing.expiresAt > Date.now()) return { success: false, error: 'Another sync is already running.' };
-  const lock = { expiresAt: Date.now() + 30000 };
+  const lock = { token: generateId(), expiresAt: Date.now() + 30000 };
   await writeLock(lock);
   try { return await operation(); } finally {
-    try { await removeLock(); } catch (error) { console.warn('Could not release sync lock:', error); }
+    try { await removeLock(lock.token); } catch (error) { console.warn('Could not release sync lock:', error); }
   }
 }
 
