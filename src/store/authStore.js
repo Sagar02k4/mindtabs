@@ -112,6 +112,12 @@ const useAuthStore = create((set, get) => ({
         );
       });
 
+      const expectedRedirect = new URL(redirectUrl);
+      const receivedRedirect = new URL(responseUrl);
+      if (receivedRedirect.origin !== expectedRedirect.origin || receivedRedirect.pathname !== expectedRedirect.pathname) {
+        throw new Error('OAuth callback did not match the extension redirect URL.');
+      }
+
       // Extract tokens from the URL fragment
       const hashParams = new URLSearchParams(
         responseUrl.split('#')[1] || responseUrl.split('?')[1] || ''
