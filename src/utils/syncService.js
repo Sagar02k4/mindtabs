@@ -121,7 +121,7 @@ export async function pushToCloud(userId) {
 
     if (cloudTabs) {
       const toDelete = cloudTabs
-        .filter(ct => !ct.deleted_at && !localTabIds.includes(ct.id) && !deletedTabs.some(dt => dt.id === ct.id))
+        .filter(ct => !localTabIds.includes(ct.id) && !deletedTabs.some(dt => dt.id === ct.id))
         .map(ct => ct.id);
 
       if (toDelete.length > 0) {
