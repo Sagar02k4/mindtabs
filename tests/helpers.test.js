@@ -51,6 +51,17 @@ test('alarm restoration schedules only future pending reminders', async () => {
   assert.equal(await scheduleReminderAlarms(reminders, alarms, 100), 1);
 });
 
+test('alarm restoration clears stale reminder alarms before rebuilding', async () => {
+  const cleared = [];
+  const alarms = {
+    getAll: async () => [{ name: 'reminder-stale' }, { name: 'sync-alarm' }],
+    clear: async (name) => { cleared.push(name); return true; },
+    create: async () => undefined,
+  };
+  await scheduleReminderAlarms([{ id: 'future', status: 'pending', remindAt: 200 }], alarms, 100);
+  assert.deepEqual(cleared, ['reminder-stale']);
+});
+
 test('CSV backups round-trip quoted titles and reject unsafe URLs through validation', () => {
   const parsed = parseCsvBackup('title,url,tag,archived\n"A, useful page",https://example.com,work,no');
   assert.equal(parsed.tabs[0].title, 'A, useful page');

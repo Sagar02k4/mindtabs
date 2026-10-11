@@ -19,6 +19,12 @@ export function advanceRecurringReminder(reminder, now = Date.now()) {
 
 export async function scheduleReminderAlarms(reminders, alarms, now = Date.now()) {
   if (!alarms?.create) return 0;
+  if (alarms.getAll && alarms.clear) {
+    const existing = await alarms.getAll();
+    await Promise.all((existing || [])
+      .filter(alarm => alarm.name?.startsWith('reminder-'))
+      .map(alarm => alarms.clear(alarm.name)));
+  }
   const pending = getFuturePendingReminders(reminders, now);
   await Promise.all(pending.map(reminder => alarms.create(`reminder-${reminder.id}`, { when: reminder.remindAt })));
   return pending.length;
