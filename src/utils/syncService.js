@@ -1,9 +1,9 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage, getDeletedTabs } from './storage';
-import { mergeLists } from './merge';
+import { mergeLists, mergeTabs } from './merge';
 import { isSafePageUrl, normalizeUrl } from './helpers';
 
-export { mergeLists } from './merge';
+export { mergeLists, mergeTabs } from './merge';
 
 const LAST_SYNC_KEY = 'mindtabs_last_sync';
 const SYNC_LOCK_KEY = 'mindtabs_sync_lock';
@@ -225,19 +225,6 @@ export async function fullSync(userId) {
  */
 export async function getLastSyncTime() {
   return await getFromStorage(LAST_SYNC_KEY);
-}
-
-function mergeTabs(local, cloud) {
-  const localUpdated = local.updatedAt || local.createdAt;
-  const cloudUpdated = cloud.updatedAt || cloud.createdAt;
-  return {
-    ...(localUpdated >= cloudUpdated ? cloud : local),
-    tag: (local.tagUpdatedAt || localUpdated) >= (cloud.tagUpdatedAt || cloudUpdated) ? local.tag : cloud.tag,
-    isArchived: (local.archiveUpdatedAt || localUpdated) >= (cloud.archiveUpdatedAt || cloudUpdated) ? Boolean(local.isArchived) : Boolean(cloud.isArchived),
-    tagUpdatedAt: Math.max(local.tagUpdatedAt || 0, cloud.tagUpdatedAt || 0),
-    archiveUpdatedAt: Math.max(local.archiveUpdatedAt || 0, cloud.archiveUpdatedAt || 0),
-    updatedAt: Math.max(localUpdated, cloudUpdated),
-  };
 }
 
 /**
