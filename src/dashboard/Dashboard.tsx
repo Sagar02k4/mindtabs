@@ -238,8 +238,9 @@ function DashboardContent() {
       <DeleteConfirmModal
         isOpen={showDeleteAll}
         onClose={() => setShowDeleteAll(false)}
-        onConfirm={() => {
-          deleteAllData();
+        onConfirm={async () => {
+          const deleted = await deleteAllData();
+          if (!deleted) return;
           setSelected(new Set());
           setWorkspaces([]);
           setShowDeleteAll(false);

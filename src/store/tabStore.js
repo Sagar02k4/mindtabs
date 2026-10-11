@@ -267,13 +267,19 @@ const useTabStore = create((set, get) => ({
 
   // Delete all data
   deleteAllData: async () => {
-    set({ tabs: [], reminders: [], searchQuery: '', activeTag: 'all' });
-    await saveData([], []);
-    await Promise.all([saveWorkspaces([]), saveDeletedTabs([])]);
-    if (typeof chrome !== 'undefined' && chrome.alarms) {
-      await scheduleReminderAlarms([], chrome.alarms);
+    try {
+      await saveData([], []);
+      await Promise.all([saveWorkspaces([]), saveDeletedTabs([])]);
+      if (typeof chrome !== 'undefined' && chrome.alarms) {
+        await scheduleReminderAlarms([], chrome.alarms);
+      }
+      set({ tabs: [], reminders: [], searchQuery: '', activeTag: 'all', lastDeleted: null, actionError: null });
+    } catch (error) {
+      set({ actionError: error instanceof Error ? `Could not delete all data: ${error.message}` : 'Could not delete all data.' });
+      return false;
     }
     triggerSync();
+    return true;
   },
 
   bulkUpdate: async (tabIds, action, value) => {
