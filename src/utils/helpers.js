@@ -153,7 +153,7 @@ export function parseCsvBackup(csv) {
   const titleIndex = headers.indexOf('title'); const urlIndex = headers.indexOf('url');
   if (titleIndex < 0 || urlIndex < 0) throw new Error('CSV must contain title and url columns.');
   const tagIndex = headers.indexOf('tag'); const archivedIndex = headers.indexOf('archived');
-  const tabs = lines.slice(1).filter(Boolean).map((line, index) => { const values = parseLine(line); const now = Date.now() + index; return { id: `csv-${now}-${index}`, title: values[titleIndex], url: values[urlIndex], tag: tagIndex >= 0 ? values[tagIndex] || null : null, isArchived: archivedIndex >= 0 && /^(yes|true|1)$/i.test(values[archivedIndex]), createdAt: now, lastVisited: now, updatedAt: now, tagUpdatedAt: now, archiveUpdatedAt: now }; });
+  const tabs = lines.slice(1).filter(Boolean).map((line) => { const values = parseLine(line); const now = Date.now(); return { id: `csv-${generateId()}`, title: values[titleIndex], url: values[urlIndex], tag: tagIndex >= 0 ? values[tagIndex] || null : null, isArchived: archivedIndex >= 0 && /^(yes|true|1)$/i.test(values[archivedIndex]), createdAt: now, lastVisited: now, updatedAt: now, tagUpdatedAt: now, archiveUpdatedAt: now }; });
   return { version: 1, tabs, reminders: [] };
 }
 
