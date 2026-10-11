@@ -24,6 +24,7 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, 
       {/* Modal */}
       <div role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title" className="relative glass rounded-2xl p-6 max-w-md w-full animate-scale-in shadow-2xl shadow-black/50">
         <button
+          type="button"
           ref={closeButtonRef}
           aria-label="Close delete confirmation"
           onClick={onClose}
@@ -47,10 +48,10 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, 
         </div>
 
         <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="danger" icon={Trash2} onClick={onConfirm}>
+          <Button type="button" variant="danger" icon={Trash2} onClick={onConfirm}>
             Delete
           </Button>
         </div>

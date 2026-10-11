@@ -240,6 +240,8 @@ function DashboardContent() {
         onClose={() => setShowDeleteAll(false)}
         onConfirm={() => {
           deleteAllData();
+          setSelected(new Set());
+          setWorkspaces([]);
           setShowDeleteAll(false);
         }}
         title="Delete All Data"
