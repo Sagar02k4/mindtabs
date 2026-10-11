@@ -44,6 +44,7 @@ export async function setToStorage(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
     console.error('Storage set error:', e);
+    throw new Error(`Could not save MindTabs storage: ${e instanceof Error ? e.message : 'storage unavailable'}`);
   }
 }
 

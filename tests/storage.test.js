@@ -13,3 +13,12 @@ test('clearAllStorage removes only MindTabs-owned Chrome storage keys', async ()
   assert.deepEqual(calls, [Object.values(STORAGE_KEYS)]);
   delete globalThis.chrome;
 });
+
+test('local storage write failures propagate to callers', async () => {
+  globalThis.localStorage = {
+    setItem() { throw new Error('quota exceeded'); },
+  };
+  const module = await import(`../src/utils/storage.js?fallback-test=${Date.now()}`);
+  await assert.rejects(() => module.setToStorage('mindtabs_test', { value: true }), /quota exceeded/);
+  delete globalThis.localStorage;
+});
