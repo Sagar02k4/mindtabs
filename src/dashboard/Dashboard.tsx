@@ -200,8 +200,8 @@ function DashboardContent() {
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} MindTabs</p>
             <div className="flex gap-4">
-                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs", "_blank")} className="hover:text-foreground">GitHub</button>
-                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs/issues", "_blank")} className="hover:text-foreground">Support</button>
+                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs", "_blank", "noopener,noreferrer")} className="hover:text-foreground">GitHub</button>
+                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs/issues", "_blank", "noopener,noreferrer")} className="hover:text-foreground">Support</button>
             </div>
         </div>
       </footer>

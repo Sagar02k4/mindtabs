@@ -57,7 +57,7 @@ const LandingPage = () => {
             <span className="font-bold text-xl tracking-tight text-foreground">MindTabs</span>
           </div>
           <button 
-            onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank')}
+            onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank', 'noopener,noreferrer')}
             className="text-sm font-medium hover:text-primary transition-colors cursor-pointer"
           >
             Get from GitHub
@@ -94,7 +94,7 @@ const LandingPage = () => {
           
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button 
-              onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank')}
+            onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank', 'noopener,noreferrer')}
               className="w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/25 transition-all hover:-translate-y-0.5 cursor-pointer"
             >
               <Download className="w-5 h-5" />
@@ -172,7 +172,7 @@ const LandingPage = () => {
         </div>
 
         <button 
-          onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank')}
+          onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank', 'noopener,noreferrer')}
           className="px-10 py-5 bg-foreground text-white rounded-full font-bold text-lg inline-flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-xl cursor-pointer"
         >
           Download Source Code <ArrowRight className="w-5 h-5" />
