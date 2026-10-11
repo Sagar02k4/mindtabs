@@ -51,12 +51,12 @@ const ResetPassword = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       {/* Brand */}
-      <div className="absolute top-8 left-8 flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+      <button type="button" aria-label="Go to MindTabs homepage" className="absolute top-8 left-8 flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20">
           <Zap className="w-4 h-4 text-white" />
         </div>
         <span className="font-bold text-xl tracking-tight text-foreground">MindTabs</span>
-      </div>
+      </button>
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
