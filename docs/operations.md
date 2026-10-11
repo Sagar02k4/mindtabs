@@ -10,7 +10,8 @@ npm run check
 npm --prefix WebAuthPortal ci
 npm --prefix WebAuthPortal run lint
 npm --prefix WebAuthPortal run build
-npm audit --audit-level=high
+npm audit --omit=dev --audit-level=high
+npm audit --audit-level=high || true # report development-only advisories without blocking the release gate
 ```
 
 ## Supabase changes
