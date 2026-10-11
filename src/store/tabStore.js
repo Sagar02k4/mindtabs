@@ -172,11 +172,9 @@ const useTabStore = create((set, get) => ({
     await saveReminders(updated);
     triggerSync();
 
-    // Set Chrome alarm
+    // Reconcile the complete set so replacing a reminder also removes its old alarm.
     if (typeof chrome !== 'undefined' && chrome.alarms) {
-      chrome.alarms.create(`reminder-${newReminder.id}`, {
-        when: remindAt,
-      });
+      await scheduleReminderAlarms(updated, chrome.alarms);
     }
 
     return newReminder;
@@ -190,7 +188,7 @@ const useTabStore = create((set, get) => ({
     triggerSync();
 
     if (typeof chrome !== 'undefined' && chrome.alarms) {
-      chrome.alarms.clear(`reminder-${reminderId}`);
+      await chrome.alarms.clear(`reminder-${reminderId}`);
     }
   },
 
