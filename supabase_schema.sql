@@ -28,6 +28,14 @@ ALTER TABLE tabs ADD COLUMN IF NOT EXISTS tag_updated_at BIGINT;
 ALTER TABLE tabs ADD COLUMN IF NOT EXISTS archive_updated_at BIGINT;
 ALTER TABLE tabs ADD COLUMN IF NOT EXISTS deleted_at BIGINT;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tabs_url_http_check') THEN
+    ALTER TABLE tabs ADD CONSTRAINT tabs_url_http_check
+      CHECK (url IS NULL OR url ~* '^https?://');
+  END IF;
+END $$;
+
 -- ─── Reminders Table ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS reminders (
   id TEXT PRIMARY KEY,
@@ -45,6 +53,38 @@ CREATE INDEX IF NOT EXISTS idx_reminders_tab_id ON reminders(tab_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_user_status ON reminders(user_id, status);
 ALTER TABLE reminders ADD COLUMN IF NOT EXISTS updated_at BIGINT;
 ALTER TABLE reminders ADD COLUMN IF NOT EXISTS repeat TEXT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reminders_repeat_check') THEN
+    ALTER TABLE reminders ADD CONSTRAINT reminders_repeat_check
+      CHECK (repeat IS NULL OR repeat IN ('daily', 'weekly'));
+  END IF;
+END $$;
+
+-- Prevent a user from attaching a reminder to another user's tab. RLS on the
+-- reminder row alone is insufficient because tab_id is an independent value.
+CREATE OR REPLACE FUNCTION public.ensure_reminder_tab_owner()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NEW.tab_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public.tabs
+    WHERE tabs.id = NEW.tab_id AND tabs.user_id = NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'Reminder tab does not belong to the authenticated user';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS reminders_tab_owner_trigger ON reminders;
+CREATE TRIGGER reminders_tab_owner_trigger
+  BEFORE INSERT OR UPDATE OF tab_id, user_id ON reminders
+  FOR EACH ROW EXECUTE FUNCTION public.ensure_reminder_tab_owner();
 
 DO $$
 BEGIN
