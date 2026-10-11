@@ -132,15 +132,20 @@ async function handleAlarm(alarm) {
   if (tab) {
     const settings = await getSettings();
     if (settings.notifications !== false) {
-    // Show notification
-      chrome.notifications.create(`notif-${reminder.id}`, {
-      type: 'basic',
-      iconUrl: tab.favicon || 'icons/icon128.png',
-      title: '🔔 MindTabs Reminder',
-      message: `Time to revisit: ${tab.title}`,
-      buttons: [{ title: 'Open Tab' }],
-      priority: 2,
-      });
+      // Notification delivery is best-effort. It must not prevent the
+      // reminder from being completed or rescheduled when the API rejects it.
+      try {
+        await chrome.notifications.create(`notif-${reminder.id}`, {
+          type: 'basic',
+          iconUrl: tab.favicon || 'icons/icon128.png',
+          title: '🔔 MindTabs Reminder',
+          message: `Time to revisit: ${tab.title}`,
+          buttons: [{ title: 'Open Tab' }],
+          priority: 2,
+        });
+      } catch (error) {
+        console.warn('MindTabs notification delivery failed:', error);
+      }
     }
   }
 
