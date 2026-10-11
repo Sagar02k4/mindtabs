@@ -142,3 +142,5 @@ Contributions, issues, and feature requests are welcome!
 
 ## 📄 License
 This project is licensed under the MIT License.
+
+See [SECURITY.md](SECURITY.md) for privacy and security behavior and [docs/operations.md](docs/operations.md) for release and recovery procedures.

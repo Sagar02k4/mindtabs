@@ -303,11 +303,14 @@ const useTabStore = create((set, get) => ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayTimestamp = today.getTime();
+    const weekTimestamp = todayTimestamp - 6 * 24 * 60 * 60 * 1000;
 
     return {
       totalTabs: tabs.filter(t => !t.isArchived).length,
       archivedTabs: tabs.filter(t => t.isArchived).length,
       tabsToday: tabs.filter(t => t.createdAt >= todayTimestamp && !t.isArchived).length,
+      tabsThisWeek: tabs.filter(t => t.createdAt >= weekTimestamp && !t.isArchived).length,
+      uniqueDomains: new Set(tabs.filter(t => !t.isArchived).map(t => { try { return new URL(t.url).hostname; } catch { return t.url; } })).size,
       activeReminders: reminders.filter(r => r.status === 'pending').length,
       tagBreakdown: tabs.reduce((acc, t) => {
         const tag = t.tag || 'untagged';

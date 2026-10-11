@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, CalendarPlus, Bell, TrendingUp } from 'lucide-react';
+import { Layers, CalendarPlus, Bell, TrendingUp, Globe2 } from 'lucide-react';
 import useTabStore from '../../store/tabStore';
 
 export default function StatsCards() {
@@ -24,6 +24,14 @@ export default function StatsCards() {
       borderColor: 'border-cyan-500/20',
     },
     {
+      label: 'This Week',
+      value: stats.tabsThisWeek,
+      icon: CalendarPlus,
+      gradient: 'from-sky-500/20 to-sky-600/20',
+      iconColor: 'text-sky-400',
+      borderColor: 'border-sky-500/20',
+    },
+    {
       label: 'Active Reminders',
       value: stats.activeReminders,
       icon: Bell,
@@ -38,6 +46,14 @@ export default function StatsCards() {
       gradient: 'from-emerald-500/20 to-emerald-600/20',
       iconColor: 'text-emerald-400',
       borderColor: 'border-emerald-500/20',
+    },
+    {
+      label: 'Domains',
+      value: stats.uniqueDomains,
+      icon: Globe2,
+      gradient: 'from-indigo-500/20 to-indigo-600/20',
+      iconColor: 'text-indigo-400',
+      borderColor: 'border-indigo-500/20',
     },
   ];
 
