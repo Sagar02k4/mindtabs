@@ -272,6 +272,7 @@ export default function Popup() {
                     <div className="mt-1 pt-1 border-t border-surface-700/50">
                       <input 
                         type="datetime-local"
+                        aria-label="Custom reminder date and time"
                         value={customDateTime}
                         onChange={(e) => setCustomDateTime(e.target.value)}
                         className="input-field text-xs mb-1.5"
@@ -332,12 +333,14 @@ export default function Popup() {
                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                   <button 
                     onClick={() => { if (typeof chrome !== 'undefined') chrome.tabs.create({ url: tab.url }); }}
+                    aria-label={`Open ${tab.title}`}
                     className="p-1 rounded hover:bg-surface-700/50 text-surface-400 hover:text-surface-200 transition-colors"
                   >
                     <ExternalLink size={12} />
                   </button>
                   <button 
                     onClick={() => removeTab(tab.id)}
+                    aria-label={`Delete ${tab.title}`}
                     className="p-1 rounded hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
                   >
                     <Trash2 size={12} />

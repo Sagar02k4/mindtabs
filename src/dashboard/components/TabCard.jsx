@@ -149,7 +149,7 @@ export default function TabCard({ tab, index }) {
                       animate-scale-in shadow-xl shadow-black/40">
           <div className="flex items-center justify-between px-2 pb-1 mb-1 border-b border-surface-700/50">
             <span className="text-xs text-surface-400 font-medium">{reminder ? 'Reset Reminder' : 'Set Reminder'}</span>
-            <button onClick={() => setShowReminderPicker(false)} className="text-surface-500 hover:text-surface-300">
+            <button onClick={() => setShowReminderPicker(false)} aria-label="Close reminder menu" className="text-surface-500 hover:text-surface-300">
               <X size={12} />
             </button>
           </div>
@@ -168,6 +168,7 @@ export default function TabCard({ tab, index }) {
           <div className="mt-1 pt-1 border-t border-surface-700/50 space-y-1.5 p-1">
             <input 
               type="datetime-local"
+              aria-label="Custom reminder date and time"
               value={customDateTime}
               onChange={(e) => setCustomDateTime(e.target.value)}
               className="input-field text-xs"
@@ -188,8 +189,8 @@ export default function TabCard({ tab, index }) {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative glass rounded-xl p-5 max-w-sm w-full shadow-2xl">
-            <h3 className="font-semibold text-surface-100">Delete this saved page?</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby={`delete-tab-title-${tab.id}`} className="relative glass rounded-xl p-5 max-w-sm w-full shadow-2xl">
+            <h3 id={`delete-tab-title-${tab.id}`} className="font-semibold text-surface-100">Delete this saved page?</h3>
             <p className="text-sm text-surface-400 mt-2">{reminder ? 'This tab has a reminder. Delete the tab and its reminder?' : 'This cannot be undone.'}</p>
             <div className="flex justify-end gap-2 mt-5">
               <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>No</button>
