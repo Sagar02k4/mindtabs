@@ -49,6 +49,8 @@ export function extractDomain(url) {
 export function normalizeUrl(url) {
   try {
     const u = new URL(url);
+    u.username = '';
+    u.password = '';
     u.hash = '';
     const removable = /^(utm_|fbclid$|gclid$|mc_cid$|mc_eid$|ref$|source$)/i;
     [...u.searchParams.keys()].forEach((key) => {

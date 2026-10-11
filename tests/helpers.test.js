@@ -21,6 +21,10 @@ test('normalizeUrl preserves meaningful query parameters', () => {
   );
 });
 
+test('normalizeUrl strips embedded URL credentials', () => {
+  assert.equal(normalizeUrl('https://alice:secret@example.com/private?view=1'), 'https://example.com/private?view=1');
+});
+
 test('safe page validation rejects executable URL schemes', () => {
   assert.equal(isSafePageUrl('javascript:alert(1)'), false);
   assert.equal(isSafePageUrl('https://example.com/page'), true);
