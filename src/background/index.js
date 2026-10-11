@@ -3,6 +3,7 @@ import { CLEANUP_ALARM, CLEANUP_AFTER_DAYS } from '../utils/constants';
 import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getSettings } from '../utils/storage';
 import { fullSync } from '../utils/syncService';
 import { isSupabaseConfigured } from '../utils/supabase';
+import { scheduleReminderAlarms } from '../utils/reminders';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 
@@ -221,10 +222,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 async function restoreReminderAlarms() {
   const reminders = await getAllReminders();
-  const now = Date.now();
-  await Promise.all(reminders.filter(r => r.status === 'pending' && r.remindAt > now).map(r =>
-    chrome.alarms.create(`reminder-${r.id}`, { when: r.remindAt })
-  ));
+  await scheduleReminderAlarms(reminders, chrome.alarms);
 }
 
 console.log('MindTabs background service worker loaded');

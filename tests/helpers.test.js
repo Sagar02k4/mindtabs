@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup } from '../src/utils/helpers.js';
+import { getFuturePendingReminders, scheduleReminderAlarms } from '../src/utils/reminders.js';
 
 test('normalizeUrl groups tracking variants of one page', () => {
   assert.equal(
@@ -40,4 +41,11 @@ test('encrypted backups round-trip and reject a wrong password', async () => {
   const encrypted = await encryptBackup(backup, 'correct horse battery');
   assert.equal((await decryptBackup(encrypted, 'correct horse battery')).tabs[0].url, backup.tabs[0].url);
   await assert.rejects(() => decryptBackup(encrypted, 'wrong password'), /Could not decrypt/);
+});
+
+test('alarm restoration schedules only future pending reminders', async () => {
+  const alarms = { create: async (name, info) => ({ name, info }) };
+  const reminders = [{ id: 'past', status: 'pending', remindAt: 10 }, { id: 'future', status: 'pending', remindAt: 200 }, { id: 'done', status: 'completed', remindAt: 300 }];
+  assert.deepEqual(getFuturePendingReminders(reminders, 100).map(item => item.id), ['future']);
+  assert.equal(await scheduleReminderAlarms(reminders, alarms, 100), 1);
 });
