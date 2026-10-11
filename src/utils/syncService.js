@@ -191,12 +191,12 @@ export async function pullFromCloud(userId) {
       cloudReminders.map(cr => ({
         id: cr.id,
         tabId: cr.tab_id,
-        remindAt: cr.remind_at,
-        status: cr.status,
-        createdAt: cr.created_at,
-        updatedAt: cr.updated_at || cr.created_at,
-        repeat: cr.repeat || null,
-      })),
+        remindAt: Number(cr.remind_at),
+        status: ['pending', 'completed', 'cancelled'].includes(cr.status) ? cr.status : 'pending',
+        createdAt: Number(cr.created_at) || Date.now(),
+        updatedAt: Number(cr.updated_at) || Number(cr.created_at) || Date.now(),
+        repeat: ['daily', 'weekly'].includes(cr.repeat) ? cr.repeat : null,
+      })).filter(reminder => reminder.tabId && Number.isFinite(reminder.remindAt) && reminder.remindAt > 0),
       'id',
       (a, b) => (a.updatedAt || a.createdAt) >= (b.updatedAt || b.createdAt) ? a : b
     );
