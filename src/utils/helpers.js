@@ -88,6 +88,33 @@ export function validateBackup(data) {
   return { tabs, reminders };
 }
 
+const encodeBytes = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+const decodeBytes = value => Uint8Array.from(atob(value), char => char.charCodeAt(0));
+
+export async function encryptBackup(data, password) {
+  if (!password || password.length < 8) throw new Error('Backup password must be at least 8 characters.');
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(JSON.stringify(data)));
+  return { format: 'mindtabs-encrypted-backup', version: 1, algorithm: 'AES-GCM/PBKDF2-SHA256', salt: encodeBytes(salt), iv: encodeBytes(iv), ciphertext: encodeBytes(ciphertext) };
+}
+
+export async function decryptBackup(envelope, password) {
+  if (!envelope || envelope.format !== 'mindtabs-encrypted-backup' || envelope.version !== 1) throw new Error('Unsupported encrypted backup format.');
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: decodeBytes(envelope.salt), iterations: 120000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  try {
+    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decodeBytes(envelope.iv) }, key, decodeBytes(envelope.ciphertext));
+    return JSON.parse(new TextDecoder().decode(plaintext));
+  } catch {
+    throw new Error('Could not decrypt backup. Check the password.');
+  }
+}
+
 /**
  * Get favicon URL for a given page URL
  */

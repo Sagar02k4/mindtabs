@@ -6,6 +6,7 @@ import useAuthStore from '../store/authStore';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
 import { getSettings, saveSettings, getWorkspaces } from '../utils/storage';
+import { encryptBackup, decryptBackup } from '../utils/helpers';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
 import StatsCards from './components/StatsCards';
@@ -68,15 +69,17 @@ function DashboardContent() {
   const loading = tabsLoading || authLoading;
 
   const toggleSelected = (id) => setSelected(current => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; });
-  const exportData = (csv = false) => {
+  const exportData = async (csv = false, encrypted = false) => {
     const rows = tabs.filter(t => selected.size === 0 || selected.has(t.id));
+    const backup = { version: 1, exportedAt: new Date().toISOString(), tabs: rows, reminders: useTabStore.getState().reminders };
+    if (encrypted) { const password = window.prompt('Choose a backup password (minimum 8 characters).'); if (!password) return; const envelope = await encryptBackup(backup, password); const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mindtabs-encrypted-backup.json'; a.click(); URL.revokeObjectURL(a.href); return; }
     const content = csv
       ? ['title,url,tag,archived', ...rows.map(t => [t.title, t.url, t.tag || '', t.isArchived ? 'yes' : 'no'].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
-      : JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), tabs: rows, reminders: useTabStore.getState().reminders }, null, 2);
+      : JSON.stringify(backup, null, 2);
     const blob = new Blob([content], { type: csv ? 'text/csv' : 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mindtabs-backup.${csv ? 'csv' : 'json'}`; a.click(); URL.revokeObjectURL(a.href);
   };
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); return; } if (!window.confirm('Import this backup and merge it with your current data?')) return; const reader = new FileReader(); reader.onload = async () => { try { await useTabStore.getState().importData(JSON.parse(String(reader.result))); setSyncMessage('Backup imported and merged successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); return; } if (!window.confirm('Import this backup and merge it with your current data?')) return; const reader = new FileReader(); reader.onload = async () => { try { let parsed = JSON.parse(String(reader.result)); if (parsed.format === 'mindtabs-encrypted-backup') { const password = window.prompt('Enter the backup password.'); if (!password) return; parsed = await decryptBackup(parsed, password); } await useTabStore.getState().importData(parsed); setSyncMessage('Backup imported and merged successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
   const updateSettings = async (next) => { const merged = { ...settings, ...next }; setSettings(merged); await saveSettings(merged); const browser = (globalThis as any).chrome; if (browser?.alarms) { if (next.syncIntervalMinutes) browser.alarms.create('sync-alarm', { periodInMinutes: Math.max(1, Number(merged.syncIntervalMinutes)) }); if (next.retentionDays) browser.alarms.create('weekly-cleanup', { periodInMinutes: 7 * 24 * 60 }); } setSyncMessage('Settings saved.'); };
   const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank'); });
   const saveWorkspace = async () => { if (!selected.size) { setSyncMessage('Select tabs before saving a workspace.'); return; } const name = window.prompt('Workspace name'); if (name) { await useTabStore.getState().saveWorkspace(name, [...selected]); setSyncMessage(`Workspace “${name}” saved.`); } };
@@ -126,6 +129,7 @@ function DashboardContent() {
               <button className="btn-secondary" onClick={() => { const ids = visibleTabs.map(t => t.id); setSelected(new Set(ids)); }}><FolderOpen size={14} /> Select page</button>
               {selected.size > 0 && <><button className="btn-secondary" onClick={openSelected}>Open selected</button><button className="btn-secondary" onClick={saveWorkspace}>Save workspace</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'archive')}>Archive selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'unarchive')}>Unarchive selected</button><button className="btn-secondary" onClick={() => setSelected(new Set())}>Clear selection</button></>}
               <button className="btn-secondary" onClick={() => exportData(false)}><Download size={14} /> Export JSON</button>
+              <button className="btn-secondary" onClick={() => exportData(false, true)}>Encrypted backup</button>
               <button className="btn-secondary" onClick={() => exportData(true)}>Export CSV</button>
               <label className="btn-secondary cursor-pointer"><Upload size={14} /> Import JSON<input type="file" accept="application/json" className="hidden" onChange={importData} /></label>
               <button className="btn-secondary" onClick={() => setShowSettings(!showSettings)}><Settings size={14} /> Settings</button>
