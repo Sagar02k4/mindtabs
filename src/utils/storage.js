@@ -89,8 +89,10 @@ export async function getAllTabs() {
     isArchived: Boolean(tab.isArchived),
   })).filter(tab => tab.url && isSafePageUrl(tab.url));
   const migrated = compactTabsByUrl(normalized);
-  if (JSON.stringify(raw) !== JSON.stringify(migrated)) await setToStorage(STORAGE_KEYS.TABS, migrated);
-  await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
+  if (JSON.stringify(raw) !== JSON.stringify(migrated)) {
+    await setToStorage(STORAGE_KEYS.TABS, migrated);
+    await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
+  }
   return migrated;
 }
 
@@ -136,8 +138,10 @@ export async function getAllReminders() {
     status: ['pending', 'completed', 'cancelled'].includes(reminder.status) ? reminder.status : 'pending',
     repeat: ['daily', 'weekly'].includes(reminder.repeat) ? reminder.repeat : null,
   })).filter(reminder => reminder.tabId && reminder.remindAt > 0);
-  if (JSON.stringify(raw) !== JSON.stringify(reminders)) await setToStorage(STORAGE_KEYS.REMINDERS, reminders);
-  await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
+  if (JSON.stringify(raw) !== JSON.stringify(reminders)) {
+    await setToStorage(STORAGE_KEYS.REMINDERS, reminders);
+    await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
+  }
   return reminders;
 }
 
