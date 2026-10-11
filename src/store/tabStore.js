@@ -266,7 +266,7 @@ const useTabStore = create((set, get) => ({
     await saveData([], []);
     await Promise.all([saveWorkspaces([]), saveDeletedTabs([])]);
     if (typeof chrome !== 'undefined' && chrome.alarms) {
-      chrome.alarms.clearAll();
+      await scheduleReminderAlarms([], chrome.alarms);
     }
     triggerSync();
   },
