@@ -1,13 +1,29 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage } from './storage';
+import { mergeLists } from './merge';
+
+export { mergeLists } from './merge';
 
 const LAST_SYNC_KEY = 'mindtabs_last_sync';
+let syncQueue = Promise.resolve();
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+async function withRetry(operation, attempts = 3) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try { return await operation(); } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) await sleep(300 * (2 ** attempt));
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Push local tabs and reminders to Supabase
  */
 export async function pushToCloud(userId) {
-  if (!isSupabaseConfigured() || !userId) return { success: false };
+  if (!isSupabaseConfigured() || !userId) return { success: false, error: 'Cloud sync is not configured or you are signed out.' };
 
   try {
     const [tabs, reminders] = await Promise.all([getAllTabs(), getAllReminders()]);
@@ -21,8 +37,12 @@ export async function pushToCloud(userId) {
         url: t.url,
         favicon: t.favicon,
         tag: t.tag,
+        is_archived: Boolean(t.isArchived),
         created_at: t.createdAt,
         last_visited: t.lastVisited || t.createdAt,
+        updated_at: t.updatedAt || t.createdAt,
+        tag_updated_at: t.tagUpdatedAt || t.updatedAt || t.createdAt,
+        archive_updated_at: t.archiveUpdatedAt || t.updatedAt || t.createdAt,
       }));
 
       const { error: tabError } = await supabase
@@ -41,6 +61,7 @@ export async function pushToCloud(userId) {
         remind_at: r.remindAt,
         status: r.status,
         created_at: r.createdAt,
+        updated_at: r.updatedAt || r.createdAt,
       }));
 
       const { error: remError } = await supabase
@@ -96,7 +117,7 @@ export async function pushToCloud(userId) {
  * Pull tabs and reminders from Supabase and merge with local
  */
 export async function pullFromCloud(userId) {
-  if (!isSupabaseConfigured() || !userId) return { success: false };
+  if (!isSupabaseConfigured() || !userId) return { success: false, error: 'Cloud sync is not configured or you are signed out.' };
 
   try {
     const [tabsResult, remindersResult] = await Promise.all([
@@ -120,11 +141,15 @@ export async function pullFromCloud(userId) {
         url: ct.url,
         favicon: ct.favicon,
         tag: ct.tag,
+        isArchived: Boolean(ct.is_archived),
         createdAt: ct.created_at,
         lastVisited: ct.last_visited,
+        updatedAt: ct.updated_at || ct.last_visited || ct.created_at,
+        tagUpdatedAt: ct.tag_updated_at || ct.updated_at || ct.created_at,
+        archiveUpdatedAt: ct.archive_updated_at || ct.updated_at || ct.created_at,
       })),
       'id',
-      (a, b) => (a.lastVisited || a.createdAt) >= (b.lastVisited || b.createdAt) ? a : b
+      mergeTabs
     );
 
     // Merge reminders (last-write-wins based on createdAt)
@@ -136,9 +161,10 @@ export async function pullFromCloud(userId) {
         remindAt: cr.remind_at,
         status: cr.status,
         createdAt: cr.created_at,
+        updatedAt: cr.updated_at || cr.created_at,
       })),
       'id',
-      (a, b) => a.createdAt >= b.createdAt ? a : b
+      (a, b) => (a.updatedAt || a.createdAt) >= (b.updatedAt || b.createdAt) ? a : b
     );
 
     await Promise.all([saveTabs(mergedTabs), saveReminders(mergedReminders)]);
@@ -155,13 +181,27 @@ export async function pullFromCloud(userId) {
  * Full bidirectional sync: pull → merge → push
  */
 export async function fullSync(userId) {
-  if (!isSupabaseConfigured() || !userId) return { success: false };
+  if (!isSupabaseConfigured() || !userId) return { success: false, error: 'Cloud sync is not configured or you are signed out.' };
 
-  const pullResult = await pullFromCloud(userId);
-  if (!pullResult.success) return pullResult;
-
-  const pushResult = await pushToCloud(userId);
-  return pushResult;
+  const run = async () => {
+    try {
+      const pullResult = await withRetry(async () => {
+        const result = await pullFromCloud(userId);
+        if (!result.success) throw new Error(result.error || 'Cloud pull failed.');
+        return result;
+      });
+      return withRetry(async () => {
+        const result = await pushToCloud(userId);
+        if (!result.success) throw new Error(result.error || 'Cloud push failed.');
+        return result;
+      });
+    } catch (error) {
+      return { success: false, error: error.message || 'Cloud sync failed.' };
+    }
+  };
+  const result = syncQueue.then(run, run);
+  syncQueue = result.catch(() => undefined);
+  return result;
 }
 
 /**
@@ -171,27 +211,19 @@ export async function getLastSyncTime() {
   return await getFromStorage(LAST_SYNC_KEY);
 }
 
+function mergeTabs(local, cloud) {
+  const localUpdated = local.updatedAt || local.createdAt;
+  const cloudUpdated = cloud.updatedAt || cloud.createdAt;
+  return {
+    ...(localUpdated >= cloudUpdated ? cloud : local),
+    tag: (local.tagUpdatedAt || localUpdated) >= (cloud.tagUpdatedAt || cloudUpdated) ? local.tag : cloud.tag,
+    isArchived: (local.archiveUpdatedAt || localUpdated) >= (cloud.archiveUpdatedAt || cloudUpdated) ? Boolean(local.isArchived) : Boolean(cloud.isArchived),
+    tagUpdatedAt: Math.max(local.tagUpdatedAt || 0, cloud.tagUpdatedAt || 0),
+    archiveUpdatedAt: Math.max(local.archiveUpdatedAt || 0, cloud.archiveUpdatedAt || 0),
+    updatedAt: Math.max(localUpdated, cloudUpdated),
+  };
+}
+
 /**
  * Merge two lists by a key field with a conflict resolver
  */
-function mergeLists(localList, cloudList, keyField, conflictResolver) {
-  const map = new Map();
-
-  // Add all local items
-  for (const item of localList) {
-    map.set(item[keyField], item);
-  }
-
-  // Merge cloud items
-  for (const item of cloudList) {
-    const key = item[keyField];
-    if (map.has(key)) {
-      // Conflict: use resolver
-      map.set(key, conflictResolver(map.get(key), item));
-    } else {
-      map.set(key, item);
-    }
-  }
-
-  return Array.from(map.values());
-}

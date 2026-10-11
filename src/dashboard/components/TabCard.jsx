@@ -10,7 +10,8 @@ export default function TabCard({ tab, index }) {
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
-  const { updateTag, removeTab, setReminder, getReminderForTab, toggleArchive } = useTabStore();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const { updateTag, removeTab, setReminder, resetReminder, getReminderForTab, toggleArchive } = useTabStore();
 
   const reminder = getReminderForTab(tab.id);
 
@@ -39,7 +40,7 @@ export default function TabCard({ tab, index }) {
 
   const handleSetReminder = async (preset) => {
     if (preset.id === 'custom') return;
-    await setReminder(tab.id, preset.getTime());
+    await (reminder ? resetReminder(tab.id, preset.getTime()) : setReminder(tab.id, preset.getTime()));
     setShowReminderPicker(false);
   };
 
@@ -47,7 +48,7 @@ export default function TabCard({ tab, index }) {
     if (!customDateTime) return;
     const time = new Date(customDateTime).getTime();
     if (time <= Date.now()) return;
-    await setReminder(tab.id, time);
+    await (reminder ? resetReminder(tab.id, time) : setReminder(tab.id, time));
     setShowReminderPicker(false);
     setCustomDateTime('');
   };
@@ -116,7 +117,7 @@ export default function TabCard({ tab, index }) {
           <button
             onClick={() => { setShowReminderPicker(!showReminderPicker); setShowTagPicker(false); }}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-amber-400 transition-colors"
-            title="Set Reminder"
+            title={reminder ? "Reset Reminder" : "Set Reminder"}
           >
             <Bell size={14} />
           </button>
@@ -128,7 +129,7 @@ export default function TabCard({ tab, index }) {
             <XCircle size={14} />
           </button>
           <button
-            onClick={() => removeTab(tab.id)}
+            onClick={() => setShowDeleteConfirm(true)}
             className="p-2 rounded-lg hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
             title="Delete from Dashboard"
           >
@@ -142,7 +143,7 @@ export default function TabCard({ tab, index }) {
         <div className="absolute right-4 top-14 z-50 glass rounded-xl p-2 min-w-[200px] 
                       animate-scale-in shadow-xl shadow-black/40">
           <div className="flex items-center justify-between px-2 pb-1 mb-1 border-b border-surface-700/50">
-            <span className="text-xs text-surface-400 font-medium">Set Reminder</span>
+            <span className="text-xs text-surface-400 font-medium">{reminder ? 'Reset Reminder' : 'Set Reminder'}</span>
             <button onClick={() => setShowReminderPicker(false)} className="text-surface-500 hover:text-surface-300">
               <X size={12} />
             </button>
@@ -173,6 +174,19 @@ export default function TabCard({ tab, index }) {
             >
               Set Custom
             </button>
+          </div>
+        </div>
+      )}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative glass rounded-xl p-5 max-w-sm w-full shadow-2xl">
+            <h3 className="font-semibold text-surface-100">Delete this saved page?</h3>
+            <p className="text-sm text-surface-400 mt-2">{reminder ? 'This tab has a reminder. Delete the tab and its reminder?' : 'This cannot be undone.'}</p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>No</button>
+              <button className="btn-danger" onClick={() => { removeTab(tab.id); setShowDeleteConfirm(false); }}>Yes, delete</button>
+            </div>
           </div>
         </div>
       )}

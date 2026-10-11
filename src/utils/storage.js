@@ -1,4 +1,4 @@
-import { STORAGE_KEYS } from './constants';
+import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants';
 
 /**
  * Chrome storage wrapper with async/await support.
@@ -55,8 +55,23 @@ export async function clearAllStorage() {
 }
 
 export async function getAllTabs() {
-  const tabs = await getFromStorage(STORAGE_KEYS.TABS);
-  return tabs || [];
+  const raw = await getFromStorage(STORAGE_KEYS.TABS);
+  const tabs = Array.isArray(raw) ? raw : [];
+  const migrated = tabs.filter(Boolean).map((tab) => ({
+    ...tab,
+    id: String(tab.id || crypto.randomUUID()),
+    title: typeof tab.title === 'string' ? tab.title : 'Untitled',
+    url: typeof tab.url === 'string' ? tab.url : '',
+    createdAt: Number(tab.createdAt) || Date.now(),
+    lastVisited: Number(tab.lastVisited) || Number(tab.createdAt) || Date.now(),
+    updatedAt: Number(tab.updatedAt) || Number(tab.lastVisited) || Number(tab.createdAt) || Date.now(),
+    tagUpdatedAt: Number(tab.tagUpdatedAt) || Number(tab.updatedAt) || Number(tab.createdAt) || Date.now(),
+    archiveUpdatedAt: Number(tab.archiveUpdatedAt) || Number(tab.updatedAt) || Number(tab.createdAt) || Date.now(),
+    isArchived: Boolean(tab.isArchived),
+  })).filter(tab => tab.url);
+  if (JSON.stringify(raw) !== JSON.stringify(migrated)) await setToStorage(STORAGE_KEYS.TABS, migrated);
+  await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
+  return migrated;
 }
 
 export async function saveTabs(tabs) {
@@ -64,8 +79,19 @@ export async function saveTabs(tabs) {
 }
 
 export async function getAllReminders() {
-  const reminders = await getFromStorage(STORAGE_KEYS.REMINDERS);
-  return reminders || [];
+  const raw = await getFromStorage(STORAGE_KEYS.REMINDERS);
+  const reminders = (Array.isArray(raw) ? raw : []).filter(Boolean).map((reminder) => ({
+    ...reminder,
+    id: String(reminder.id || crypto.randomUUID()),
+    tabId: String(reminder.tabId || ''),
+    remindAt: Number(reminder.remindAt) || 0,
+    createdAt: Number(reminder.createdAt) || Date.now(),
+    updatedAt: Number(reminder.updatedAt) || Number(reminder.createdAt) || Date.now(),
+    status: ['pending', 'completed', 'cancelled'].includes(reminder.status) ? reminder.status : 'pending',
+  })).filter(reminder => reminder.tabId && reminder.remindAt > 0);
+  if (JSON.stringify(raw) !== JSON.stringify(reminders)) await setToStorage(STORAGE_KEYS.REMINDERS, reminders);
+  await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
+  return reminders;
 }
 
 export async function saveReminders(reminders) {
@@ -74,7 +100,7 @@ export async function saveReminders(reminders) {
 
 export async function getSettings() {
   const settings = await getFromStorage(STORAGE_KEYS.SETTINGS);
-  return settings || { theme: 'dark', notifications: true };
+  return { theme: 'dark', notifications: true, tracking: true, retentionDays: 90, syncIntervalMinutes: 5, ...(settings || {}) };
 }
 
 export async function saveSettings(settings) {

@@ -39,9 +39,9 @@ const useAuthStore = create((set, get) => ({
               isAuthenticated: true,
               error: null,
             });
-          } else if (event === 'SIGNED_OUT') {
+          } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
             removeFromStorage(AUTH_SESSION_KEY);
-            set({ user: null, session: null, isAuthenticated: false });
+            set({ user: null, session: null, isAuthenticated: false, error: 'Your session expired. Please sign in again.' });
           }
         });
         authSubscription = data.subscription;
@@ -72,6 +72,7 @@ const useAuthStore = create((set, get) => ({
         if (error) {
           // Session expired, clear it
           await removeFromStorage(AUTH_SESSION_KEY);
+          set({ user: null, session: null, isAuthenticated: false, error: 'Your session expired. Please sign in again.' });
         }
       }
     } catch (err) {

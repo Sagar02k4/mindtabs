@@ -3,7 +3,9 @@ export const STORAGE_KEYS = {
   TABS: 'mindtabs_tabs',
   REMINDERS: 'mindtabs_reminders',
   SETTINGS: 'mindtabs_settings',
+  SCHEMA_VERSION: 'mindtabs_schema_version',
 };
+export const STORAGE_SCHEMA_VERSION = 2;
 
 // Tag options
 export const TAG_OPTIONS = [
@@ -62,3 +64,6 @@ export const FREE_LIMITS = {
   MAX_TABS: 100,
   MAX_REMINDERS: 5,
 };
+
+export const CLEANUP_ALARM = 'weekly-cleanup';
+export const CLEANUP_AFTER_DAYS = 90;

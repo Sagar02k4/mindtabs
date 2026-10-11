@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage } from '../utils/storage';
-import { generateId, getUserIdFromAccessToken } from '../utils/helpers';
+import { generateId, getUserIdFromAccessToken, normalizeUrl } from '../utils/helpers';
 import { FREE_LIMITS } from '../utils/constants';
 import { pushToCloud } from '../utils/syncService';
 
@@ -20,13 +20,16 @@ function triggerSync() {
       // Decode user ID from the access token (JWT payload)
       const userId = getUserIdFromAccessToken(session.access_token);
       if (userId) {
-        await pushToCloud(userId);
+        const result = await pushToCloud(userId);
+        if (!result.success) setStoreActionError(result.error || 'Cloud sync failed.');
       }
     } catch (err) {
       console.warn('Sync trigger failed:', err);
     }
   }, 2000);
 }
+
+let setStoreActionError = () => {};
 
 const useTabStore = create((set, get) => ({
   tabs: [],
@@ -44,28 +47,38 @@ const useTabStore = create((set, get) => ({
       getAllReminders(),
     ]);
     set({ tabs: tabs || [], reminders: reminders || [], loading: false });
+    if (typeof chrome !== 'undefined' && chrome.alarms) {
+      (reminders || []).filter(r => r.status === 'pending' && r.remindAt > Date.now()).forEach(r => {
+        chrome.alarms.create(`reminder-${r.id}`, { when: r.remindAt });
+      });
+    }
   },
 
   // Tab actions
   addTab: async (tabData) => {
     const { tabs } = get();
     // Check if tab with same URL already exists
-    const existing = tabs.find(t => t.url === tabData.url);
+    const normalizedUrl = normalizeUrl(tabData.url);
+    const existing = tabs.find(t => normalizeUrl(t.url) === normalizedUrl);
     if (existing) return existing;
     if (tabs.filter(t => !t.isArchived).length >= FREE_LIMITS.MAX_TABS) {
       set({ actionError: `Free accounts can track up to ${FREE_LIMITS.MAX_TABS} active tabs.` });
       return null;
     }
 
+    const now = Date.now();
     const newTab = {
       id: generateId(),
       title: tabData.title || 'Untitled',
-      url: tabData.url,
+      url: normalizedUrl,
       favicon: tabData.favicon || null,
       tag: null,
       isArchived: false,
-      createdAt: Date.now(),
-      lastVisited: Date.now(),
+      createdAt: now,
+      lastVisited: now,
+      updatedAt: now,
+      tagUpdatedAt: now,
+      archiveUpdatedAt: now,
     };
     const updated = [newTab, ...tabs];
     set({ tabs: updated, actionError: null });
@@ -85,8 +98,9 @@ const useTabStore = create((set, get) => ({
 
   updateTag: async (tabId, tag) => {
     const { tabs } = get();
-    const updated = tabs.map(t => 
-      t.id === tabId ? { ...t, tag } : t
+    const now = Date.now();
+    const updated = tabs.map(t =>
+      t.id === tabId ? { ...t, tag, tagUpdatedAt: now, updatedAt: now } : t
     );
     set({ tabs: updated });
     await saveTabs(updated);
@@ -95,8 +109,9 @@ const useTabStore = create((set, get) => ({
 
   toggleArchive: async (tabId) => {
     const { tabs } = get();
-    const updated = tabs.map(t => 
-      t.id === tabId ? { ...t, isArchived: !t.isArchived } : t
+    const now = Date.now();
+    const updated = tabs.map(t =>
+      t.id === tabId ? { ...t, isArchived: !t.isArchived, archiveUpdatedAt: now, updatedAt: now } : t
     );
     set({ tabs: updated });
     await saveTabs(updated);
@@ -118,6 +133,7 @@ const useTabStore = create((set, get) => ({
       remindAt,
       status: 'pending',
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     const updated = [...filtered, newReminder];
     set({ reminders: updated, actionError: null });
@@ -144,6 +160,13 @@ const useTabStore = create((set, get) => ({
     if (typeof chrome !== 'undefined' && chrome.alarms) {
       chrome.alarms.clear(`reminder-${reminderId}`);
     }
+  },
+
+  resetReminder: async (tabId, remindAt) => {
+    const { reminders } = get();
+    const current = reminders.find(r => r.tabId === tabId && r.status === 'pending');
+    if (current) await get().clearReminder(current.id);
+    return get().setReminder(tabId, remindAt);
   },
 
   // Filter / search
@@ -215,6 +238,30 @@ const useTabStore = create((set, get) => ({
     triggerSync();
   },
 
+  bulkUpdate: async (tabIds, action, value) => {
+    const { tabs } = get();
+    const now = Date.now();
+    const selected = new Set(tabIds);
+    const updated = tabs.map(tab => {
+      if (!selected.has(tab.id)) return tab;
+      if (action === 'archive') return { ...tab, isArchived: true, archiveUpdatedAt: now, updatedAt: now };
+      if (action === 'unarchive') return { ...tab, isArchived: false, archiveUpdatedAt: now, updatedAt: now };
+      if (action === 'tag') return { ...tab, tag: value || null, tagUpdatedAt: now, updatedAt: now };
+      return tab;
+    });
+    set({ tabs: updated });
+    await saveTabs(updated);
+    triggerSync();
+  },
+
+  importData: async (data) => {
+    if (!data || !Array.isArray(data.tabs) || !Array.isArray(data.reminders)) throw new Error('Invalid MindTabs backup file.');
+    await saveTabs(data.tabs);
+    await saveReminders(data.reminders);
+    await get().init();
+    triggerSync();
+  },
+
   // Stats
   getStats: () => {
     const { tabs, reminders } = get();
@@ -235,5 +282,7 @@ const useTabStore = create((set, get) => ({
     };
   },
 }));
+
+setStoreActionError = (message) => useTabStore.setState({ actionError: message });
 
 export default useTabStore;

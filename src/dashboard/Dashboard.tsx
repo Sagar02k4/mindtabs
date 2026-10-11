@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { Sparkles, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Sparkles, Trash2, RefreshCw, AlertCircle, Download, Upload, FolderOpen, Bell, Settings } from 'lucide-react';
 import useTabStore from '../store/tabStore';
 import useAuthStore from '../store/authStore';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
+import { getSettings, saveSettings } from '../utils/storage';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
 import StatsCards from './components/StatsCards';
@@ -17,11 +18,19 @@ import AuthPage from './components/AuthPage';
 
 function DashboardContent() {
   const navigate = useNavigate();
-  const { tabs, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, actionError, clearActionError } = useTabStore();
+  const { tabs, reminders, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, activeTag, actionError, clearActionError } = useTabStore();
   const { isAuthenticated, user, loading: authLoading, restoreSession } = useAuthStore();
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [page, setPage] = useState(1);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [selected, setSelected] = useState(new Set());
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState({ tracking: true, notifications: true, retentionDays: 90, syncIntervalMinutes: 5 });
+  const pageSize = 20;
   const filteredTabs = getFilteredTabs();
+  const pageCount = Math.max(1, Math.ceil(filteredTabs.length / pageSize));
+  const visibleTabs = filteredTabs.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -29,25 +38,45 @@ function DashboardContent() {
         await restoreSession();
       }
       await init();
+      setSettings(await getSettings());
     };
     bootstrap();
   }, []);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      fullSync(user.id).then(() => init());
+      fullSync(user.id).then((result) => {
+        if (!result.success) setSyncMessage(result.error || 'Sync failed. Your local data is safe.');
+        else setSyncMessage('');
+        return init();
+      });
       setShowAuth(false);
     }
   }, [isAuthenticated]);
+  useEffect(() => setPage(1), [searchQuery, activeTag]);
 
   const handleRefresh = async () => {
     if (isAuthenticated && user) {
-      await fullSync(user.id);
+      const result = await fullSync(user.id);
+      setSyncMessage(result.success ? 'Synced successfully.' : (result.error || 'Sync failed. Your local data is safe.'));
     }
     await init();
   };
 
   const loading = tabsLoading || authLoading;
+
+  const toggleSelected = (id) => setSelected(current => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const exportData = (csv = false) => {
+    const rows = tabs.filter(t => selected.size === 0 || selected.has(t.id));
+    const content = csv
+      ? ['title,url,tag,archived', ...rows.map(t => [t.title, t.url, t.tag || '', t.isArchived ? 'yes' : 'no'].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
+      : JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), tabs: rows, reminders: useTabStore.getState().reminders }, null, 2);
+    const blob = new Blob([content], { type: csv ? 'text/csv' : 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mindtabs-backup.${csv ? 'csv' : 'json'}`; a.click(); URL.revokeObjectURL(a.href);
+  };
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = async () => { try { await useTabStore.getState().importData(JSON.parse(String(reader.result))); setSyncMessage('Backup imported successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
+  const updateSettings = async (next) => { const merged = { ...settings, ...next }; setSettings(merged); await saveSettings(merged); setSyncMessage('Settings saved.'); };
+  const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank'); });
 
 
 
@@ -78,11 +107,31 @@ function DashboardContent() {
             </div>
           </div>
         )}
+        {syncMessage && (
+          <div className="max-w-7xl mx-auto px-6 pt-3">
+            <div role="status" className="rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-200">{syncMessage}</div>
+          </div>
+        )}
         <HeroDashboardWrapper 
           onRefresh={handleRefresh} 
           onClearAll={() => setShowDeleteAll(true)}
           tabsCount={tabs.length}
         >
+            <div className="flex flex-wrap items-center gap-2 mb-6">
+              <button className="btn-secondary" onClick={() => { const ids = visibleTabs.map(t => t.id); setSelected(new Set(ids)); }}><FolderOpen size={14} /> Select page</button>
+              {selected.size > 0 && <><button className="btn-secondary" onClick={openSelected}>Open selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'archive')}>Archive selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'unarchive')}>Unarchive selected</button><button className="btn-secondary" onClick={() => setSelected(new Set())}>Clear selection</button></>}
+              <button className="btn-secondary" onClick={() => exportData(false)}><Download size={14} /> Export JSON</button>
+              <button className="btn-secondary" onClick={() => exportData(true)}>Export CSV</button>
+              <label className="btn-secondary cursor-pointer"><Upload size={14} /> Import JSON<input type="file" accept="application/json" className="hidden" onChange={importData} /></label>
+              <button className="btn-secondary" onClick={() => setShowSettings(!showSettings)}><Settings size={14} /> Settings</button>
+            </div>
+            {showSettings && <div className="glass rounded-xl p-4 mb-6 grid gap-3 md:grid-cols-4 text-sm">
+              <label><input type="checkbox" checked={settings.tracking} onChange={e => updateSettings({ tracking: e.target.checked })} /> Track tabs</label>
+              <label><input type="checkbox" checked={settings.notifications} onChange={e => updateSettings({ notifications: e.target.checked })} /> Notifications</label>
+              <label>Retention days <input className="input-field w-20 ml-2" type="number" min="7" value={settings.retentionDays} onChange={e => updateSettings({ retentionDays: Number(e.target.value) })} /></label>
+              <label>Sync minutes <input className="input-field w-20 ml-2" type="number" min="1" value={settings.syncIntervalMinutes} onChange={e => updateSettings({ syncIntervalMinutes: Number(e.target.value) })} /></label>
+            </div>}
+            {reminders.filter(r => r.status === 'pending').length > 0 && <div className="glass rounded-xl p-4 mb-6"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Bell size={15} /> Upcoming reminders</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status === 'pending').sort((a,b) => a.remindAt-b.remindAt).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between"><span className="truncate">{tab?.title || 'Saved page'}</span><span>{new Date(r.remindAt).toLocaleString()}</span></div>; })}</div></div>}
             <div className="mb-6">
               <StatsCards />
             </div>
@@ -113,10 +162,17 @@ function DashboardContent() {
                         </p>
                       </div>
                       <div className="space-y-3">
-                        {filteredTabs.map((tab, index) => (
-                            <TabCard key={tab.id} tab={tab} index={index} />
+                        {visibleTabs.map((tab, index) => (
+                            <div key={tab.id} className="flex gap-2 items-start"><input aria-label={`Select ${tab.title}`} type="checkbox" checked={selected.has(tab.id)} onChange={() => toggleSelected(tab.id)} className="mt-6" /><div className="flex-1"><TabCard tab={tab} index={index} /></div></div>
                         ))}
                       </div>
+                      {pageCount > 1 && (
+                        <div className="flex items-center justify-center gap-3 mt-6">
+                          <button className="btn-secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
+                          <span className="text-xs text-muted-foreground">Page {page} of {pageCount}</span>
+                          <button className="btn-secondary" disabled={page === pageCount} onClick={() => setPage(p => p + 1)}>Next</button>
+                        </div>
+                      )}
                   </>
                   )}
               </div>

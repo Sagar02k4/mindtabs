@@ -27,8 +27,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        popup: 'src/popup/index.html',
-        dashboard: 'src/dashboard/index.html',
+        popup: path.resolve(__dirname, 'src/popup/index.html'),
+        dashboard: path.resolve(__dirname, 'src/dashboard/index.html'),
       },
     },
   },

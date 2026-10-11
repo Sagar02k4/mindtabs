@@ -11,12 +11,20 @@ CREATE TABLE IF NOT EXISTS tabs (
   url TEXT,
   favicon TEXT,
   tag TEXT,
+  is_archived BOOLEAN NOT NULL DEFAULT FALSE,
   created_at BIGINT NOT NULL,
   last_visited BIGINT
+  ,updated_at BIGINT
+  ,tag_updated_at BIGINT
+  ,archive_updated_at BIGINT
 );
 
 CREATE INDEX IF NOT EXISTS idx_tabs_user_id ON tabs(user_id);
 CREATE INDEX IF NOT EXISTS idx_tabs_user_last_visited ON tabs(user_id, last_visited DESC);
+ALTER TABLE tabs ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE tabs ADD COLUMN IF NOT EXISTS updated_at BIGINT;
+ALTER TABLE tabs ADD COLUMN IF NOT EXISTS tag_updated_at BIGINT;
+ALTER TABLE tabs ADD COLUMN IF NOT EXISTS archive_updated_at BIGINT;
 
 -- ─── Reminders Table ────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS reminders (
@@ -26,11 +34,13 @@ CREATE TABLE IF NOT EXISTS reminders (
   remind_at BIGINT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   created_at BIGINT NOT NULL
+  ,updated_at BIGINT
 );
 
 CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_tab_id ON reminders(tab_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_user_status ON reminders(user_id, status);
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS updated_at BIGINT;
 
 DO $$
 BEGIN

@@ -45,6 +45,22 @@ export function extractDomain(url) {
   }
 }
 
+// Treat tracking/query variants of the same page as one saved page.
+export function normalizeUrl(url) {
+  try {
+    const u = new URL(url);
+    u.hash = '';
+    const removable = /^(utm_|fbclid$|gclid$|mc_cid$|mc_eid$|ref$|source$)/i;
+    [...u.searchParams.keys()].forEach((key) => {
+      if (removable.test(key)) u.searchParams.delete(key);
+    });
+    if (u.pathname.length > 1) u.pathname = u.pathname.replace(/\/+$/, '');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Get favicon URL for a given page URL
  */

@@ -41,3 +41,7 @@ jobs:
       - name: Build ${{ matrix.name }}
         working-directory: ${{ matrix.working-directory }}
         run: npm run build
+
+      - name: Test and type-check extension
+        if: matrix.name == 'Extension'
+        run: npm run test && npm run typecheck
