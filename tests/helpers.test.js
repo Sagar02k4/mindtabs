@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup } from '../src/utils/helpers.js';
-import { getFuturePendingReminders, scheduleReminderAlarms } from '../src/utils/reminders.js';
+import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder } from '../src/utils/reminders.js';
 
 test('normalizeUrl groups tracking variants of one page', () => {
   assert.equal(
@@ -56,4 +56,12 @@ test('CSV backups round-trip quoted titles and reject unsafe URLs through valida
   assert.equal(validateBackup(parsed).tabs.length, 1);
   const unsafe = parseCsvBackup('title,url\nBad,javascript:alert(1)');
   assert.equal(validateBackup(unsafe).tabs.length, 0);
+});
+
+test('recurring reminders advance to the next future occurrence', () => {
+  const base = 1000000;
+  assert.deepEqual(advanceRecurringReminder({ id: 'r', remindAt: base, repeat: 'daily', status: 'pending' }, base + 2 * 86400000), {
+    id: 'r', remindAt: base + 3 * 86400000, repeat: 'daily', status: 'pending', updatedAt: base + 2 * 86400000
+  });
+  assert.equal(advanceRecurringReminder({ remindAt: base, repeat: null, status: 'pending' }, base).status, 'completed');
 });

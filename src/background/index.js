@@ -3,7 +3,7 @@ import { CLEANUP_ALARM, CLEANUP_AFTER_DAYS } from '../utils/constants';
 import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getSettings } from '../utils/storage';
 import { fullSync } from '../utils/syncService';
 import { isSupabaseConfigured } from '../utils/supabase';
-import { scheduleReminderAlarms } from '../utils/reminders';
+import { scheduleReminderAlarms, advanceRecurringReminder } from '../utils/reminders';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 
@@ -128,15 +128,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     }
   }
 
-  if (reminder.repeat === 'daily' || reminder.repeat === 'weekly') {
-    const interval = reminder.repeat === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
-    await chrome.alarms.create(`reminder-${reminder.id}`, { when: reminder.remindAt + interval });
-  }
-
   // Mark reminder complete, or advance the next recurring occurrence.
   const updatedReminders = reminders.map(r =>
-    r.id === reminderId ? { ...r, status: r.repeat ? 'pending' : 'completed', remindAt: r.repeat ? r.remindAt + (r.repeat === 'daily' ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000) : r.remindAt, updatedAt: Date.now() } : r
+    r.id === reminderId ? advanceRecurringReminder(r) : r
   );
+  const updatedReminder = updatedReminders.find(r => r.id === reminderId);
+  if (updatedReminder?.status === 'pending') await chrome.alarms.create(`reminder-${reminder.id}`, { when: updatedReminder.remindAt });
   await saveReminders(updatedReminders);
 });
 
