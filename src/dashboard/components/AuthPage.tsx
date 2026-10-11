@@ -589,12 +589,12 @@ export default function AuthPage() {
             </div>
 
             {authError && (
-              <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div role="alert" aria-live="assertive" className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg">
                 {authError}
               </div>
             )}
             {confirmMessage && (
-              <div className="p-3 text-sm text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <div role="status" aria-live="polite" className="p-3 text-sm text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                 {confirmMessage}
               </div>
             )}
@@ -604,6 +604,7 @@ export default function AuthPage() {
               className="w-full h-12 text-base font-medium" 
               size="lg" 
               disabled={isLoading || !email || (mode !== 'reset' && !password)}
+              aria-busy={isLoading}
             >
               {isLoading ? <Loader2 className="animate-spin mr-2" /> : null}
               {mode === 'login' ? "Log In" : mode === 'signup' ? "Sign Up" : "Send Reset Link"}
