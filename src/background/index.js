@@ -92,7 +92,11 @@ async function handleAlarm(alarm) {
     const cutoff = Date.now() - (Number(settings.retentionDays) || CLEANUP_AFTER_DAYS) * 24 * 60 * 60 * 1000;
     const [tabs, reminders] = await Promise.all([getAllTabs(), getAllReminders()]);
     const retained = retainTabsByPolicy(tabs, reminders, cutoff);
-    if (retained.length !== tabs.length) await saveData(retained, reminders);
+    const retainedReminders = filterRemindersForTabs(reminders, retained);
+    if (retained.length !== tabs.length || retainedReminders.length !== reminders.length) {
+      await saveData(retained, retainedReminders);
+      await scheduleReminderAlarms(retainedReminders, chrome.alarms);
+    }
     return;
   }
   if (alarm.name === 'sync-alarm') {
