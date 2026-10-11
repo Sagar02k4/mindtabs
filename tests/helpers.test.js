@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
+import { normalizeWorkspaces } from '../src/utils/workspaces.js';
 
 test('normalizeUrl groups tracking variants of one page', () => {
   assert.equal(
@@ -84,4 +85,11 @@ test('settings normalization clamps unsafe values and removes invalid domains', 
   assert.equal(settings.syncIntervalMinutes, 1440);
   assert.equal(settings.theme, 'dark');
   assert.deepEqual(settings.blockedDomains, ['example.com']);
+});
+
+test('workspace normalization removes malformed records and duplicate tab ids', () => {
+  const result = normalizeWorkspaces([{ id: 'w1', name: '  Focus  ', tabIds: ['a', 'a', '', 2] }, { id: '', tabIds: ['x'] }, null]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].name, 'Focus');
+  assert.deepEqual(result[0].tabIds, ['a', '2']);
 });

@@ -1,5 +1,6 @@
 import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants';
 import { normalizeSettings } from './settings';
+import { normalizeWorkspaces } from './workspaces';
 export { normalizeSettings } from './settings';
 
 /**
@@ -138,7 +139,9 @@ export async function saveSettings(settings) {
 
 export async function getWorkspaces() {
   const workspaces = await getFromStorage(STORAGE_KEYS.WORKSPACES);
-  return Array.isArray(workspaces) ? workspaces : [];
+  const normalized = normalizeWorkspaces(workspaces);
+  if (JSON.stringify(workspaces) !== JSON.stringify(normalized)) await setToStorage(STORAGE_KEYS.WORKSPACES, normalized);
+  return normalized;
 }
 
 export async function saveWorkspaces(workspaces) {
