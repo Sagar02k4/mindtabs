@@ -167,7 +167,17 @@ export async function getAllReminders() {
 }
 
 export async function saveReminders(reminders) {
-  await setToStorage(STORAGE_KEYS.REMINDERS, reminders);
+  const normalized = (Array.isArray(reminders) ? reminders : [])
+    .filter(reminder => reminder && typeof reminder === 'object' && reminder.tabId && Number(reminder.remindAt) > 0)
+    .map(reminder => ({
+      ...reminder,
+      id: String(reminder.id || generateId()),
+      tabId: String(reminder.tabId),
+      remindAt: Number(reminder.remindAt),
+      status: ['pending', 'completed', 'cancelled'].includes(reminder.status) ? reminder.status : 'pending',
+      repeat: ['daily', 'weekly'].includes(reminder.repeat) ? reminder.repeat : null,
+    }));
+  await setToStorage(STORAGE_KEYS.REMINDERS, normalized);
 }
 
 export async function getSettings() {
