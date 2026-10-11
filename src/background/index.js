@@ -137,7 +137,9 @@ async function handleAlarm(alarm) {
       try {
         await chrome.notifications.create(`notif-${reminder.id}`, {
           type: 'basic',
-          iconUrl: tab.favicon || 'icons/icon128.png',
+          // Keep notification rendering local; never make Chrome fetch a
+          // user-tracked page's external favicon at reminder time.
+          iconUrl: 'icons/icon128.png',
           title: '🔔 MindTabs Reminder',
           message: `Time to revisit: ${tab.title}`,
           buttons: [{ title: 'Open Tab' }],
