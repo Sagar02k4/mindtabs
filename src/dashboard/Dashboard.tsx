@@ -27,7 +27,7 @@ function DashboardContent() {
   const [syncMessage, setSyncMessage] = useState('');
   const [selected, setSelected] = useState(new Set());
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({ tracking: true, notifications: true, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
+  const [settings, setSettings] = useState({ tracking: false, notifications: true, onboardingComplete: false, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const pageSize = 20;
   const filteredTabs = getFilteredTabs();
@@ -81,6 +81,7 @@ function DashboardContent() {
   };
   const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); return; } if (!window.confirm('Import this backup and merge it with your current data?')) return; const reader = new FileReader(); reader.onload = async () => { try { let parsed = JSON.parse(String(reader.result)); if (parsed.format === 'mindtabs-encrypted-backup') { const password = window.prompt('Enter the backup password.'); if (!password) return; parsed = await decryptBackup(parsed, password); } await useTabStore.getState().importData(parsed); setSyncMessage('Backup imported and merged successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
   const updateSettings = async (next) => { const merged = { ...settings, ...next }; setSettings(merged); await saveSettings(merged); const browser = (globalThis as any).chrome; if (browser?.alarms) { if (next.syncIntervalMinutes) browser.alarms.create('sync-alarm', { periodInMinutes: Math.max(1, Number(merged.syncIntervalMinutes)) }); if (next.retentionDays) browser.alarms.create('weekly-cleanup', { periodInMinutes: 7 * 24 * 60 }); } setSyncMessage('Settings saved.'); };
+  const completeOnboarding = async (tracking) => { await updateSettings({ tracking, onboardingComplete: true }); };
   const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank'); });
   const saveWorkspace = async () => { if (!selected.size) { setSyncMessage('Select tabs before saving a workspace.'); return; } const name = window.prompt('Workspace name'); if (name) { await useTabStore.getState().saveWorkspace(name, [...selected]); setSyncMessage(`Workspace “${name}” saved.`); } };
   const restoreWorkspace = (workspace) => { const ids = new Set(workspace.tabIds); setSelected(ids); tabs.filter(tab => ids.has(tab.id)).forEach(tab => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: tab.url }); else window.open(tab.url, '_blank'); }); setSyncMessage(`Opened workspace “${workspace.name}”.`); };
@@ -99,6 +100,10 @@ function DashboardContent() {
         </div>
       </div>
     );
+  }
+
+  if (!settings.onboardingComplete) {
+    return <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6"><div className="glass rounded-2xl p-8 max-w-lg shadow-2xl"><p className="section-kicker mb-3">Welcome to MindTabs</p><h1 className="text-2xl font-bold mb-3">Save the reason behind your tabs.</h1><p className="text-sm text-muted-foreground leading-6 mb-4">MindTabs can save page titles and URLs locally and, when you sign in, sync that metadata to your Supabase account. You can pause tracking, block domains, export encrypted backups, or delete everything at any time.</p><p className="text-sm text-muted-foreground leading-6 mb-6">Do you want to enable automatic tab tracking?</p><div className="flex flex-wrap gap-3"><button className="btn-primary" onClick={() => completeOnboarding(true)}>Enable tracking</button><button className="btn-secondary" onClick={() => completeOnboarding(false)}>Keep tracking paused</button></div></div></div>;
   }
 
   return (

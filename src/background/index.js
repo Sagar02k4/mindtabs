@@ -14,7 +14,7 @@ const AUTH_SESSION_KEY = 'mindtabs_auth_session';
  */
 async function trackTab(tab) {
   const settings = await getSettings();
-  if (settings.tracking === false) return;
+  if (settings.tracking !== true || settings.onboardingComplete !== true) return;
   // Skip incognito tabs
   if (tab.incognito) return;
   

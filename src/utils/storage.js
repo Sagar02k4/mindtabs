@@ -127,7 +127,7 @@ export async function saveReminders(reminders) {
 
 export async function getSettings() {
   const settings = await getFromStorage(STORAGE_KEYS.SETTINGS);
-  return { theme: 'dark', notifications: true, tracking: true, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: ['銀行', 'bank', 'mail.google.com'], ...(settings || {}) };
+  return { theme: 'dark', notifications: true, tracking: false, onboardingComplete: false, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: ['銀行', 'bank', 'mail.google.com'], ...(settings || {}) };
 }
 
 export async function saveSettings(settings) {
