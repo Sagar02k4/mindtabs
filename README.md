@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150" alt="MindTabs Logo" width="120" />
+  <img src="icons/icon128.png" alt="MindTabs Logo" width="120" />
   <h1>MindTabs</h1>
   <p><em>Gain clarity. Reduce tab overload. Reclaim your focus.</em></p>
 
