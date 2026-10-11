@@ -169,11 +169,11 @@ export async function pullFromCloud(userId) {
     const mergedTabs = mergeLists(
       localTabs.filter(tab => !cloudDeletedIds.has(tab.id)),
       cloudTabs.filter(ct => !ct.deleted_at && isSafePageUrl(ct.url)).map(ct => ({
-        id: ct.id,
-        title: ct.title,
+        id: String(ct.id),
+        title: String(ct.title || 'Untitled').slice(0, 500),
         url: normalizeUrl(ct.url),
         favicon: sanitizeFaviconUrl(ct.favicon),
-        tag: ct.tag,
+        tag: ct.tag ? String(ct.tag).slice(0, 100) : null,
         isArchived: Boolean(ct.is_archived),
         createdAt: ct.created_at,
         lastVisited: ct.last_visited,
