@@ -238,4 +238,10 @@ async function restoreReminderAlarms() {
   await scheduleReminderAlarms(filterRemindersForTabs(reminders, tabs), chrome.alarms);
 }
 
+// A service worker can be rehydrated without a browser startup event. Reconcile
+// alarms on every worker load so future reminders are never left unscheduled.
+restoreReminderAlarms().catch((error) => {
+  console.error('MindTabs reminder restoration failed:', error);
+});
+
 console.log('MindTabs background service worker loaded');
