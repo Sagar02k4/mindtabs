@@ -53,7 +53,7 @@ export default function TabCard({ tab, index }) {
 
   const handleSetReminder = async (preset) => {
     if (preset.id === 'custom') return;
-    await (reminder ? resetReminder(tab.id, preset.getTime()) : setReminder(tab.id, preset.getTime(), repeat || null));
+    await (reminder ? resetReminder(tab.id, preset.getTime(), repeat || null) : setReminder(tab.id, preset.getTime(), repeat || null));
     setShowReminderPicker(false);
   };
 
@@ -61,7 +61,7 @@ export default function TabCard({ tab, index }) {
     if (!customDateTime) return;
     const time = new Date(customDateTime).getTime();
     if (time <= Date.now()) return;
-    await (reminder ? resetReminder(tab.id, time) : setReminder(tab.id, time));
+    await (reminder ? resetReminder(tab.id, time, repeat || null) : setReminder(tab.id, time, repeat || null));
     setShowReminderPicker(false);
     setCustomDateTime('');
   };
