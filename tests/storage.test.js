@@ -41,3 +41,19 @@ test('multi-key local saves roll back when the second write fails', async () => 
   assert.equal(values.get('mindtabs_reminders'), 'old-reminders');
   delete globalThis.localStorage;
 });
+
+test('saveTabs enforces safe URLs and favicon sanitization at the write boundary', async () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem(key) { return values.get(key) ?? null; },
+    setItem(key, value) { values.set(key, value); },
+    removeItem(key) { values.delete(key); },
+  };
+  const module = await import(`../src/utils/storage.js?save-tabs-test=${Date.now()}`);
+  await module.saveTabs([
+    { id: 'safe', url: 'https://example.com/page/', favicon: 'javascript:bad' },
+    { id: 'unsafe', url: 'javascript:alert(1)' },
+  ]);
+  assert.deepEqual(JSON.parse(values.get('mindtabs_tabs')), [{ id: 'safe', url: 'https://example.com/page', favicon: null }]);
+  delete globalThis.localStorage;
+});

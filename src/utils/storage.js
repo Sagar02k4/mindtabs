@@ -100,7 +100,15 @@ export async function getAllTabs() {
 }
 
 export async function saveTabs(tabs) {
-  await setToStorage(STORAGE_KEYS.TABS, tabs);
+  const normalized = (Array.isArray(tabs) ? tabs : [])
+    .filter(tab => tab && typeof tab === 'object' && isSafePageUrl(tab.url))
+    .map(tab => ({
+      ...tab,
+      id: String(tab.id || generateId()),
+      url: normalizeUrl(tab.url),
+      favicon: sanitizeFaviconUrl(tab.favicon),
+    }));
+  await setToStorage(STORAGE_KEYS.TABS, compactTabsByUrl(normalized));
 }
 
 export async function getDeletedTabs() {
