@@ -219,7 +219,7 @@ async function importOpenTabs() {
   await Promise.all(openTabs.map(queueTrackTab));
 }
 
-chrome.runtime.onInstalled.addListener(async (details) => {
+async function handleInstalled(details) {
   if (details.reason === 'install') {
     console.log('MindTabs installed successfully!');
   }
@@ -229,14 +229,26 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   await restoreReminderAlarms();
   await importOpenTabs();
   chrome.contextMenus.removeAll(() => chrome.contextMenus.create({ id: 'mindtabs-save-page', title: 'Save page to MindTabs', contexts: ['page'] }));
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+  handleInstalled(details).catch((error) => {
+    console.error('MindTabs install setup failed:', error);
+  });
 });
 
-chrome.runtime.onStartup.addListener(async () => {
+async function handleStartup() {
   const settings = await getSettings();
   chrome.alarms.create('sync-alarm', { periodInMinutes: Number(settings.syncIntervalMinutes) || 5 });
   chrome.alarms.create(CLEANUP_ALARM, { periodInMinutes: 7 * 24 * 60 });
   await restoreReminderAlarms();
   await importOpenTabs();
+}
+
+chrome.runtime.onStartup.addListener(() => {
+  handleStartup().catch((error) => {
+    console.error('MindTabs startup setup failed:', error);
+  });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
