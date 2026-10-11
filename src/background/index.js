@@ -251,16 +251,28 @@ chrome.runtime.onStartup.addListener(() => {
   });
 });
 
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+async function handleContextMenuClick(info, tab) {
   if (info.menuItemId === 'mindtabs-save-page' && tab) await queueTrackTab(tab);
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  handleContextMenuClick(info, tab).catch((error) => {
+    console.error('MindTabs context-menu action failed:', error);
+  });
 });
 
-chrome.commands.onCommand.addListener(async (command) => {
+async function handleCommand(command) {
   if (command === 'open-dashboard') chrome.runtime.openOptionsPage();
   if (command === 'save-current-tab') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) await queueTrackTab(tab);
   }
+}
+
+chrome.commands.onCommand.addListener((command) => {
+  handleCommand(command).catch((error) => {
+    console.error('MindTabs command failed:', error);
+  });
 });
 
 async function restoreReminderAlarms() {
