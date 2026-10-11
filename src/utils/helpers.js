@@ -63,6 +63,14 @@ export function normalizeUrl(url) {
   }
 }
 
+export function compactTabsByUrl(tabs) {
+  return [...(Array.isArray(tabs) ? tabs : []).reduce((byUrl, tab) => {
+    const existing = byUrl.get(tab.url);
+    if (!existing || tab.updatedAt >= existing.updatedAt) byUrl.set(tab.url, { ...existing, ...tab });
+    return byUrl;
+  }, new Map()).values()];
+}
+
 export function isSafePageUrl(url) {
   try {
     const parsed = new URL(url);

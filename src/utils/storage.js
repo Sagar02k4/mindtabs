@@ -1,7 +1,7 @@
 import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants';
 import { normalizeSettings } from './settings';
 import { normalizeWorkspaces } from './workspaces';
-import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl } from './helpers';
+import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl, compactTabsByUrl } from './helpers';
 export { normalizeSettings } from './settings';
 
 /**
@@ -75,7 +75,7 @@ export async function clearAllStorage() {
 export async function getAllTabs() {
   const raw = await getFromStorage(STORAGE_KEYS.TABS);
   const tabs = Array.isArray(raw) ? raw : [];
-  const migrated = tabs.filter(Boolean).map((tab) => ({
+  const normalized = tabs.filter(Boolean).map((tab) => ({
     ...tab,
     id: String(tab.id || crypto.randomUUID()),
     title: typeof tab.title === 'string' ? tab.title : 'Untitled',
@@ -88,6 +88,7 @@ export async function getAllTabs() {
     archiveUpdatedAt: Number(tab.archiveUpdatedAt) || Number(tab.updatedAt) || Number(tab.createdAt) || Date.now(),
     isArchived: Boolean(tab.isArchived),
   })).filter(tab => tab.url && isSafePageUrl(tab.url));
+  const migrated = compactTabsByUrl(normalized);
   if (JSON.stringify(raw) !== JSON.stringify(migrated)) await setToStorage(STORAGE_KEYS.TABS, migrated);
   await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
   return migrated;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken, escapeCsvCell, normalizeBlockedDomain } from '../src/utils/helpers.js';
+import { normalizeUrl, compactTabsByUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken, escapeCsvCell, normalizeBlockedDomain } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
@@ -19,6 +19,14 @@ test('normalizeUrl preserves meaningful query parameters', () => {
     normalizeUrl('https://example.com/search?q=mindtabs&utm_medium=email'),
     'https://example.com/search?q=mindtabs'
   );
+});
+
+test('tab compaction keeps the newest normalized record', () => {
+  const compacted = compactTabsByUrl([
+    { id: 'old', url: 'https://example.com/page', updatedAt: 10, tag: 'work' },
+    { id: 'new', url: 'https://example.com/page', updatedAt: 20, tag: 'research' },
+  ]);
+  assert.deepEqual(compacted, [{ id: 'new', url: 'https://example.com/page', updatedAt: 20, tag: 'research' }]);
 });
 
 test('normalizeUrl strips embedded URL credentials', () => {
