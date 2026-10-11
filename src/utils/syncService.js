@@ -163,7 +163,7 @@ export async function pullFromCloud(userId) {
 
     const localTabs = await getAllTabs();
     const localReminders = await getAllReminders();
-    const cloudDeletedIds = new Set(cloudTabs.filter(tab => tab.deleted_at).map(tab => tab.id));
+    const cloudDeletedIds = new Set(cloudTabs.filter(tab => tab.deleted_at).map(tab => String(tab.id)));
 
     // Merge tabs (last-write-wins based on last_visited / createdAt)
     const mergedTabs = mergeLists(
