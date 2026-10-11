@@ -176,7 +176,7 @@ function DashboardContent() {
               <label>Sync minutes <input className="input-field w-20 ml-2" type="number" min="1" value={settings.syncIntervalMinutes} onChange={e => updateSettings({ syncIntervalMinutes: Number(e.target.value) })} /></label>
               <label className="md:col-span-4">Never track domains <input className="input-field w-full mt-1" value={settings.blockedDomains.join(', ')} onChange={e => updateSettings({ blockedDomains: e.target.value.split(',').map(value => value.trim()).filter(Boolean) })} placeholder="bank.example, mail.example" /></label>
             </div>}
-            {reminders.filter(r => r.status === 'pending').length > 0 && <div className="glass rounded-xl p-4 mb-6"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Bell size={15} /> Upcoming reminders</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status === 'pending').sort((a,b) => a.remindAt-b.remindAt).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between"><span className="truncate">{tab?.title || 'Saved page'}</span><span>{new Date(r.remindAt).toLocaleString()}</span></div>; })}</div></div>}
+            {reminders.filter(r => r.status === 'pending').length > 0 && <div className="glass rounded-xl p-4 mb-6" aria-live="polite"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Bell size={15} /> Upcoming reminders</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status === 'pending').sort((a,b) => a.remindAt-b.remindAt).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between"><span className="truncate">{tab?.title || 'Saved page'}</span><span>{new Date(r.remindAt).toLocaleString()}</span></div>; })}</div></div>}
             <div className="mb-6">
               <StatsCards />
             </div>
@@ -213,9 +213,9 @@ function DashboardContent() {
                       </div>
                       {pageCount > 1 && (
                         <div className="flex items-center justify-center gap-3 mt-6">
-                          <button className="btn-secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
-                          <span className="text-xs text-muted-foreground">Page {page} of {pageCount}</span>
-                          <button className="btn-secondary" disabled={page === pageCount} onClick={() => setPage(p => p + 1)}>Next</button>
+                          <button type="button" className="btn-secondary" aria-label="Previous page" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
+                          <span className="text-xs text-muted-foreground" aria-current="page">Page {page} of {pageCount}</span>
+                          <button type="button" className="btn-secondary" aria-label="Next page" disabled={page === pageCount} onClick={() => setPage(p => p + 1)}>Next</button>
                         </div>
                       )}
                   </>
