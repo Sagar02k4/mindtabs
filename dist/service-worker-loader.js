@@ -1,1 +1,1 @@
-import './assets/index.js-CP_ofoFI.js';
+import './assets/index.js-CaWbFpjm.js';
