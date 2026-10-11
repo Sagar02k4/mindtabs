@@ -329,7 +329,7 @@ export default function Popup() {
                   </div>
                 </div>
                 {tab.tag && <TagBadge tag={tab.tag} size="sm" />}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                   <button 
                     onClick={() => { if (typeof chrome !== 'undefined') chrome.tabs.create({ url: tab.url }); }}
                     className="p-1 rounded hover:bg-surface-700/50 text-surface-400 hover:text-surface-200 transition-colors"

@@ -21,7 +21,7 @@ export default function TabCard({ tab, index }) {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       chrome.tabs.create({ url: tab.url });
     } else {
-      window.open(tab.url, '_blank');
+      window.open(tab.url, '_blank', 'noopener,noreferrer');
     }
   };
 
