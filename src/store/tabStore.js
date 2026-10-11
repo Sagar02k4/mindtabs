@@ -101,6 +101,9 @@ const useTabStore = create((set, get) => ({
     const updatedReminders = reminders.filter(r => r.tabId !== tabId);
     set({ tabs: updatedTabs, reminders: updatedReminders, lastDeleted: deletedTab ? { tab: deletedTab, reminders: deletedReminders } : null });
     await saveData(updatedTabs, updatedReminders);
+    if (typeof chrome !== 'undefined' && chrome.alarms) {
+      await scheduleReminderAlarms(updatedReminders, chrome.alarms);
+    }
     const deleted = await getDeletedTabs();
     await saveDeletedTabs([...deleted.filter(item => item.id !== tabId), { id: tabId, deletedAt: Date.now() }]);
     triggerSync();
@@ -112,6 +115,9 @@ const useTabStore = create((set, get) => ({
     const restoredTabs = [lastDeleted.tab, ...tabs];
     const restoredReminders = [...reminders, ...lastDeleted.reminders];
     await saveData(restoredTabs, restoredReminders);
+    if (typeof chrome !== 'undefined' && chrome.alarms) {
+      await scheduleReminderAlarms(restoredReminders, chrome.alarms);
+    }
     const deleted = await getDeletedTabs();
     await saveDeletedTabs(deleted.filter(item => item.id !== lastDeleted.tab.id));
     set({ tabs: restoredTabs, reminders: restoredReminders, lastDeleted: null });
