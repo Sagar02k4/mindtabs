@@ -75,14 +75,16 @@ export default function TabCard({ tab, index }) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <h3 
-            className="text-sm font-semibold text-surface-100 truncate cursor-pointer
+          <button
+            type="button"
+            className="block text-left text-sm font-semibold text-surface-100 truncate cursor-pointer
                       hover:text-primary-300 transition-colors"
             onClick={handleOpenTab}
             title={tab.title}
+            aria-label={`Open ${tab.title}`}
           >
             {tab.title}
-          </h3>
+          </button>
           <p className="text-xs text-surface-400 truncate mt-0.5">{extractDomain(tab.url)}</p>
           
           <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -173,7 +175,7 @@ export default function TabCard({ tab, index }) {
               onChange={(e) => setCustomDateTime(e.target.value)}
               className="input-field text-xs"
             />
-            <select value={repeat} onChange={e => setRepeat(e.target.value)} className="input-field text-xs">
+            <select aria-label="Reminder repeat frequency" value={repeat} onChange={e => setRepeat(e.target.value)} className="input-field text-xs">
               <option value="">No repeat</option><option value="daily">Repeat daily</option><option value="weekly">Repeat weekly</option>
             </select>
             <button
