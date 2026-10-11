@@ -1,7 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage, getDeletedTabs } from './storage';
 import { mergeLists, mergeTabs } from './merge';
-import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl } from './helpers';
+import { isSafePageUrl, normalizeUrl, sanitizeFaviconUrl, normalizeCloudReminder } from './helpers';
 import { filterRemindersForTabs } from './reminders';
 
 export { mergeLists, mergeTabs } from './merge';
@@ -188,15 +188,7 @@ export async function pullFromCloud(userId) {
     // Merge reminders (last-write-wins based on createdAt)
     const mergedReminders = mergeLists(
       localReminders,
-      cloudReminders.map(cr => ({
-        id: cr.id,
-        tabId: cr.tab_id,
-        remindAt: Number(cr.remind_at),
-        status: ['pending', 'completed', 'cancelled'].includes(cr.status) ? cr.status : 'pending',
-        createdAt: Number(cr.created_at) || Date.now(),
-        updatedAt: Number(cr.updated_at) || Number(cr.created_at) || Date.now(),
-        repeat: ['daily', 'weekly'].includes(cr.repeat) ? cr.repeat : null,
-      })).filter(reminder => reminder.tabId && Number.isFinite(reminder.remindAt) && reminder.remindAt > 0),
+      cloudReminders.map(reminder => normalizeCloudReminder(reminder)).filter(Boolean),
       'id',
       (a, b) => (a.updatedAt || a.createdAt) >= (b.updatedAt || b.createdAt) ? a : b
     );

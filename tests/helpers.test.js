@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, compactTabsByUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken, escapeCsvCell, normalizeBlockedDomain } from '../src/utils/helpers.js';
+import { normalizeUrl, compactTabsByUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken, escapeCsvCell, normalizeBlockedDomain, normalizeCloudReminder } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
@@ -140,6 +140,13 @@ test('reminder times must be finite and in the future', () => {
 test('orphaned reminders are excluded from alarm data', () => {
   const result = filterRemindersForTabs([{ tabId: 'kept' }, { tabId: 'missing' }], [{ id: 'kept' }]);
   assert.deepEqual(result, [{ tabId: 'kept' }]);
+});
+
+test('cloud reminder normalization rejects malformed rows and clamps enums', () => {
+  assert.equal(normalizeCloudReminder({ id: 'bad', tab_id: 'tab-1', remind_at: 0 }), null);
+  assert.deepEqual(normalizeCloudReminder({ id: 'r1', tab_id: 'tab-1', remind_at: '200', status: 'unknown', repeat: 'monthly', created_at: 10 }, 50), {
+    id: 'r1', tabId: 'tab-1', remindAt: 200, status: 'pending', repeat: null, createdAt: 10, updatedAt: 10,
+  });
 });
 
 test('settings normalization clamps unsafe values and removes invalid domains', () => {

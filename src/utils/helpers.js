@@ -115,6 +115,23 @@ export function validateBackup(data) {
   return { tabs, reminders };
 }
 
+export function normalizeCloudReminder(row, now = Date.now()) {
+  if (!row || typeof row !== 'object') return null;
+  const remindAt = Number(row.remind_at ?? row.remindAt);
+  const tabId = String(row.tab_id ?? row.tabId ?? '');
+  if (!tabId || !Number.isFinite(remindAt) || remindAt <= 0) return null;
+  const createdAt = Number(row.created_at ?? row.createdAt) || now;
+  return {
+    id: String(row.id || generateId()),
+    tabId,
+    remindAt,
+    status: ['pending', 'completed', 'cancelled'].includes(row.status) ? row.status : 'pending',
+    createdAt,
+    updatedAt: Number(row.updated_at ?? row.updatedAt) || createdAt,
+    repeat: ['daily', 'weekly'].includes(row.repeat) ? row.repeat : null,
+  };
+}
+
 const encodeBytes = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
 const decodeBytes = value => Uint8Array.from(atob(value), char => char.charCodeAt(0));
 
