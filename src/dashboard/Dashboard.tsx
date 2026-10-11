@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
 import { getSettings, saveSettings, getWorkspaces } from '../utils/storage';
 import { normalizeSettings } from '../utils/settings';
-import { encryptBackup, decryptBackup, parseCsvBackup } from '../utils/helpers';
+import { encryptBackup, decryptBackup, parseCsvBackup, escapeCsvCell } from '../utils/helpers';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
 import StatsCards from './components/StatsCards';
@@ -80,7 +80,7 @@ function DashboardContent() {
     const backup = { version: 1, exportedAt: new Date().toISOString(), tabs: rows, reminders: useTabStore.getState().reminders };
     if (encrypted) { const password = window.prompt('Choose a backup password (minimum 8 characters).'); if (!password) return; if (password.length < 8) { setSyncMessage('Encrypted backup passwords must be at least 8 characters.'); return; } const envelope = await encryptBackup(backup, password); const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mindtabs-encrypted-backup.json'; a.click(); URL.revokeObjectURL(a.href); return; }
     const content = csv
-      ? ['title,url,tag,archived', ...rows.map(t => [t.title, t.url, t.tag || '', t.isArchived ? 'yes' : 'no'].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
+      ? ['title,url,tag,archived', ...rows.map(t => [t.title, t.url, t.tag || '', t.isArchived ? 'yes' : 'no'].map(escapeCsvCell).join(','))].join('\n')
       : JSON.stringify(backup, null, 2);
     const blob = new Blob([content], { type: csv ? 'text/csv' : 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mindtabs-backup.${csv ? 'csv' : 'json'}`; a.click(); URL.revokeObjectURL(a.href);

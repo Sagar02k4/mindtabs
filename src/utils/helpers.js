@@ -157,6 +157,12 @@ export function parseCsvBackup(csv) {
   return { version: 1, tabs, reminders: [] };
 }
 
+export function escapeCsvCell(value) {
+  const text = String(value ?? '');
+  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
 /**
  * Get favicon URL for a given page URL
  */

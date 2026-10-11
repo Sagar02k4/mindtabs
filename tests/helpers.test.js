@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken } from '../src/utils/helpers.js';
+import { normalizeUrl, isSafePageUrl, validateBackup, isBlockedDomain, encryptBackup, decryptBackup, parseCsvBackup, getFaviconUrl, generateId, sanitizeFaviconUrl, getUserIdFromAccessToken, escapeCsvCell } from '../src/utils/helpers.js';
 import { getFuturePendingReminders, scheduleReminderAlarms, advanceRecurringReminder, isValidReminderTime, filterRemindersForTabs } from '../src/utils/reminders.js';
 import { normalizeSettings } from '../src/utils/settings.js';
 import { normalizeWorkspaces } from '../src/utils/workspaces.js';
@@ -55,6 +55,11 @@ test('expired access tokens are rejected for background identity use', () => {
   const active = encode({ sub: 'user-1', exp: Math.floor(Date.now() / 1000) + 3600 });
   assert.equal(getUserIdFromAccessToken(`${header}.${expired}.signature`), null);
   assert.equal(getUserIdFromAccessToken(`${header}.${active}.signature`), 'user-1');
+});
+
+test('CSV export escapes spreadsheet formulas', () => {
+  assert.equal(escapeCsvCell('=HYPERLINK("https://evil.example")'), `"'=HYPERLINK(""https://evil.example"")"`);
+  assert.equal(escapeCsvCell('ordinary text'), '"ordinary text"');
 });
 
 test('backup validation removes unsafe and orphaned records', () => {
