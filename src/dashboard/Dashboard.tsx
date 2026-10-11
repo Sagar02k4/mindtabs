@@ -57,7 +57,13 @@ function DashboardContent() {
       setShowAuth(false);
     }
   }, [isAuthenticated]);
-  useEffect(() => setPage(1), [searchQuery, activeTag]);
+  useEffect(() => {
+    // A selection belongs to the current result set. Keeping hidden selections
+    // after filtering makes bulk actions and exports unexpectedly affect tabs
+    // the user can no longer see.
+    setPage(1);
+    setSelected(new Set());
+  }, [searchQuery, activeTag]);
   useEffect(() => setPage(current => Math.min(current, pageCount)), [pageCount]);
   useEffect(() => {
     const validIds = new Set(tabs.map(tab => tab.id));
