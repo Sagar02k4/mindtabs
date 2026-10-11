@@ -1,6 +1,7 @@
 import { STORAGE_KEYS, STORAGE_SCHEMA_VERSION } from './constants';
 import { normalizeSettings } from './settings';
 import { normalizeWorkspaces } from './workspaces';
+import { isSafePageUrl, normalizeUrl } from './helpers';
 export { normalizeSettings } from './settings';
 
 /**
@@ -64,14 +65,14 @@ export async function getAllTabs() {
     ...tab,
     id: String(tab.id || crypto.randomUUID()),
     title: typeof tab.title === 'string' ? tab.title : 'Untitled',
-    url: typeof tab.url === 'string' ? tab.url : '',
+    url: typeof tab.url === 'string' ? normalizeUrl(tab.url) : '',
     createdAt: Number(tab.createdAt) || Date.now(),
     lastVisited: Number(tab.lastVisited) || Number(tab.createdAt) || Date.now(),
     updatedAt: Number(tab.updatedAt) || Number(tab.lastVisited) || Number(tab.createdAt) || Date.now(),
     tagUpdatedAt: Number(tab.tagUpdatedAt) || Number(tab.updatedAt) || Number(tab.createdAt) || Date.now(),
     archiveUpdatedAt: Number(tab.archiveUpdatedAt) || Number(tab.updatedAt) || Number(tab.createdAt) || Date.now(),
     isArchived: Boolean(tab.isArchived),
-  })).filter(tab => tab.url);
+  })).filter(tab => tab.url && isSafePageUrl(tab.url));
   if (JSON.stringify(raw) !== JSON.stringify(migrated)) await setToStorage(STORAGE_KEYS.TABS, migrated);
   await setToStorage(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION);
   return migrated;

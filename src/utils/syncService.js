@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage, setToStorage, getDeletedTabs } from './storage';
 import { mergeLists } from './merge';
+import { isSafePageUrl, normalizeUrl } from './helpers';
 
 export { mergeLists } from './merge';
 
@@ -149,10 +150,10 @@ export async function pullFromCloud(userId) {
     // Merge tabs (last-write-wins based on last_visited / createdAt)
     const mergedTabs = mergeLists(
       localTabs.filter(tab => !cloudDeletedIds.has(tab.id)),
-      cloudTabs.filter(ct => !ct.deleted_at).map(ct => ({
+      cloudTabs.filter(ct => !ct.deleted_at && isSafePageUrl(ct.url)).map(ct => ({
         id: ct.id,
         title: ct.title,
-        url: ct.url,
+        url: normalizeUrl(ct.url),
         favicon: ct.favicon,
         tag: ct.tag,
         isArchived: Boolean(ct.is_archived),
