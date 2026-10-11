@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Sparkles, Loader2, Chrome } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -577,15 +576,6 @@ export default function AuthPage() {
             <div className="flex items-center justify-between">
               {mode === 'login' && (
                 <>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="remember" />
-                    <Label
-                      htmlFor="remember"
-                      className="text-sm font-normal cursor-pointer text-muted-foreground"
-                    >
-                      Remember for 30 days
-                    </Label>
-                  </div>
                   <button 
                     type="button" 
                     onClick={() => toggleMode('reset')}
