@@ -131,7 +131,7 @@ function DashboardContent() {
   }
 
   if (!settings.onboardingComplete) {
-    return <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6"><div className="glass rounded-2xl p-8 max-w-lg shadow-2xl"><p className="section-kicker mb-3">Welcome to MindTabs</p><h1 className="text-2xl font-bold mb-3">Save the reason behind your tabs.</h1><p className="text-sm text-muted-foreground leading-6 mb-4">MindTabs can save page titles and URLs locally and, when you sign in, sync that metadata to your Supabase account. You can pause tracking, block domains, export encrypted backups, or delete everything at any time.</p><p className="text-sm text-muted-foreground leading-6 mb-6">Do you want to enable automatic tab tracking?</p><div className="flex flex-wrap gap-3"><button className="btn-primary" onClick={() => completeOnboarding(true)}>Enable tracking</button><button className="btn-secondary" onClick={() => completeOnboarding(false)}>Keep tracking paused</button></div></div></div>;
+    return <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6"><div className="glass rounded-2xl p-8 max-w-lg shadow-2xl"><p className="section-kicker mb-3">Welcome to MindTabs</p><h1 className="text-2xl font-bold mb-3">Save the reason behind your tabs.</h1><p className="text-sm text-muted-foreground leading-6 mb-4">MindTabs can save page titles and URLs locally and, when you sign in, sync that metadata to your Supabase account. You can pause tracking, block domains, export encrypted backups, or delete everything at any time.</p><p className="text-sm text-muted-foreground leading-6 mb-6">Do you want to enable automatic tab tracking?</p><div className="flex flex-wrap gap-3"><button type="button" className="btn-primary" onClick={() => completeOnboarding(true)}>Enable tracking</button><button type="button" className="btn-secondary" onClick={() => completeOnboarding(false)}>Keep tracking paused</button></div></div></div>;
   }
 
   return (
@@ -143,7 +143,7 @@ function DashboardContent() {
           <div className="max-w-7xl mx-auto px-6 pt-6">
             <div role="alert" className="flex items-center justify-between gap-4 rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
               <span>{actionError}</span>
-              <button onClick={clearActionError} className="rounded-lg px-2 py-1 text-amber-100 hover:bg-amber-400/10" aria-label="Dismiss message">Dismiss</button>
+              <button type="button" onClick={clearActionError} className="rounded-lg px-2 py-1 text-amber-100 hover:bg-amber-400/10" aria-label="Dismiss message">Dismiss</button>
             </div>
           </div>
         )}
@@ -152,7 +152,7 @@ function DashboardContent() {
             <div role="status" className="rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-200">{syncMessage}</div>
           </div>
         )}
-        {lastDeleted && <div className="max-w-7xl mx-auto px-6 pt-3"><div role="status" className="flex items-center justify-between rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200"><span>“{lastDeleted.tab.title}” deleted.</span><button className="btn-secondary" onClick={undoLastDelete}>Undo</button></div></div>}
+        {lastDeleted && <div className="max-w-7xl mx-auto px-6 pt-3"><div role="status" className="flex items-center justify-between rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200"><span>“{lastDeleted.tab.title}” deleted.</span><button type="button" className="btn-secondary" onClick={undoLastDelete}>Undo</button></div></div>}
         <HeroDashboardWrapper 
           onRefresh={handleRefresh} 
           onClearAll={() => setShowDeleteAll(true)}
@@ -229,8 +229,8 @@ function DashboardContent() {
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} MindTabs</p>
             <div className="flex gap-4">
-                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs", "_blank", "noopener,noreferrer")} className="hover:text-foreground">GitHub</button>
-                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs/issues", "_blank", "noopener,noreferrer")} className="hover:text-foreground">Support</button>
+                <a href="https://github.com/Sagar02k4/MindTabs" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
+                <a href="https://github.com/Sagar02k4/MindTabs/issues" target="_blank" rel="noreferrer" className="hover:text-foreground">Support</a>
             </div>
         </div>
       </footer>
