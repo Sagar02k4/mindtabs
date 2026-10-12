@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { Sparkles, Trash2, RefreshCw, AlertCircle, Download, Upload, FolderOpen, Bell, Settings } from 'lucide-react';
+import { Sparkles, Trash2, RefreshCw, AlertCircle, Download, Upload, FolderOpen, Bell, Clock, Settings } from 'lucide-react';
 import useTabStore from '../store/tabStore';
 import useAuthStore from '../store/authStore';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
 import { getSettings, saveSettings, getWorkspaces } from '../utils/storage';
 import { normalizeSettings } from '../utils/settings';
-import { encryptBackup, decryptBackup, parseCsvBackup, escapeCsvCell, validateBackup } from '../utils/helpers';
+import { encryptBackup, decryptBackup, parseCsvBackup, escapeCsvCell, validateBackup, formatDate } from '../utils/helpers';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
 import StatsCards from './components/StatsCards';
@@ -181,6 +181,7 @@ function DashboardContent() {
               <label className="md:col-span-4">Never track domains <input className="input-field w-full mt-1" value={settings.blockedDomains.join(', ')} onChange={e => updateSettings({ blockedDomains: e.target.value.split(',').map(value => value.trim()).filter(Boolean) })} placeholder="bank.example, mail.example" /></label>
             </div>}
             {reminders.filter(r => r.status === 'pending').length > 0 && <div className="glass rounded-xl p-4 mb-6" aria-live="polite"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Bell size={15} /> Upcoming reminders</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status === 'pending').sort((a,b) => a.remindAt-b.remindAt).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between"><span className="truncate">{tab?.title || 'Saved page'}</span><span>{new Date(r.remindAt).toLocaleString()}</span></div>; })}</div></div>}
+            {reminders.some(r => r.status !== 'pending') && <div className="glass rounded-xl p-4 mb-6" aria-label="Reminder history"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Clock size={15} /> Reminder history</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status !== 'pending').sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 8).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between gap-3"><span className="truncate">{tab?.title || 'Saved page'}</span><span className="shrink-0">{r.status === 'completed' ? 'Completed' : 'Cancelled'} · {formatDate(r.updatedAt || r.remindAt)}</span></div>; })}</div></div>}
             <div className="mb-6">
               <StatsCards />
             </div>
