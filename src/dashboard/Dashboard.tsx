@@ -33,6 +33,7 @@ function DashboardContent() {
   const [importPreview, setImportPreview] = useState<{ tabs: any[]; reminders: any[] } | null>(null);
   const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
   const [importing, setImporting] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const pageSize = 20;
   const filteredTabs = useMemo(() => getFilteredTabs(), [getFilteredTabs, tabs, searchQuery, activeTag, sortBy]);
   const pageCount = Math.max(1, Math.ceil(filteredTabs.length / pageSize));
@@ -115,6 +116,7 @@ function DashboardContent() {
   };
   const completeOnboarding = async (tracking) => { await updateSettings({ tracking, onboardingComplete: true }); };
   const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank', 'noopener,noreferrer'); });
+  const bulkUpdateSelected = async (action: 'archive' | 'unarchive') => { if (!selected.size || bulkBusy) return; setBulkBusy(true); try { await useTabStore.getState().bulkUpdate([...selected], action); setSyncMessage(`${action === 'archive' ? 'Archived' : 'Unarchived'} ${selected.size} tabs.`); setSelected(new Set()); } catch (error) { setSyncMessage(error instanceof Error ? error.message : 'Bulk update failed.'); } finally { setBulkBusy(false); } };
   const saveWorkspace = async () => { if (!selected.size) { setSyncMessage('Select tabs before saving a workspace.'); return; } const name = window.prompt('Workspace name'); if (name) { const workspace = await useTabStore.getState().saveWorkspace(name, [...selected]); setWorkspaces(current => [...current, workspace]); setSyncMessage(`Workspace “${workspace.name}” saved.`); } };
   const restoreWorkspace = (workspace) => { const ids = new Set(workspace.tabIds); const existingTabs = tabs.filter(tab => ids.has(tab.id)); setSelected(new Set(existingTabs.map(tab => tab.id))); existingTabs.forEach(tab => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: tab.url }); else window.open(tab.url, '_blank', 'noopener,noreferrer'); }); setSyncMessage(existingTabs.length ? `Opened workspace “${workspace.name}”.` : 'No tabs from this workspace are available.'); };
 
@@ -164,7 +166,7 @@ function DashboardContent() {
         >
             <div className="flex flex-wrap items-center gap-2 mb-6">
               <button type="button" className="btn-secondary" onClick={() => { const ids = visibleTabs.map(t => t.id); setSelected(new Set(ids)); }}><FolderOpen size={14} /> Select all on this page</button>
-              {selected.size > 0 && <><button className="btn-secondary" onClick={openSelected}>Open selected</button><button className="btn-secondary" onClick={saveWorkspace}>Save workspace</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'archive')}>Archive selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'unarchive')}>Unarchive selected</button><button className="btn-secondary" onClick={() => setSelected(new Set())}>Clear selection</button></>}
+              {selected.size > 0 && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary-500/20 bg-primary-500/5 p-2"><span className="text-xs text-muted-foreground px-1">{selected.size} selected</span><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={openSelected}>Open selected</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={saveWorkspace}>Save workspace</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={() => bulkUpdateSelected('archive')}>{bulkBusy ? 'Updating…' : 'Archive selected'}</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={() => bulkUpdateSelected('unarchive')}>Unarchive selected</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={() => setSelected(new Set())}>Clear selection</button></div>}
               <button className="btn-secondary" onClick={() => exportData(false)}><Download size={14} /> Export JSON</button>
               <button className="btn-secondary" onClick={() => exportData(false, true)}>Encrypted backup</button>
               <button className="btn-secondary" onClick={() => exportData(true)}>Export CSV</button>
