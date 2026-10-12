@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
 import { getSettings, saveSettings, getWorkspaces } from '../utils/storage';
 import { normalizeSettings } from '../utils/settings';
-import { encryptBackup, decryptBackup, parseCsvBackup, escapeCsvCell } from '../utils/helpers';
+import { encryptBackup, decryptBackup, parseCsvBackup, escapeCsvCell, validateBackup } from '../utils/helpers';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
 import StatsCards from './components/StatsCards';
@@ -30,6 +30,9 @@ function DashboardContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({ theme: 'dark', tracking: false, notifications: true, onboardingComplete: false, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
   const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [importPreview, setImportPreview] = useState<{ tabs: any[]; reminders: any[] } | null>(null);
+  const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
+  const [importing, setImporting] = useState(false);
   const pageSize = 20;
   const filteredTabs = useMemo(() => getFilteredTabs(), [getFilteredTabs, tabs, searchQuery, activeTag, sortBy]);
   const pageCount = Math.max(1, Math.ceil(filteredTabs.length / pageSize));
@@ -91,7 +94,8 @@ function DashboardContent() {
     const blob = new Blob([content], { type: csv ? 'text/csv' : 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mindtabs-backup.${csv ? 'csv' : 'json'}`; a.click(); URL.revokeObjectURL(a.href);
   };
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); return; } if (!window.confirm('Import this backup and merge it with your current data?')) return; const reader = new FileReader(); reader.onload = async () => { try { const text = String(reader.result); let parsed = file.name.toLowerCase().endsWith('.csv') ? parseCsvBackup(text) : JSON.parse(text); if (parsed.format === 'mindtabs-encrypted-backup') { const password = window.prompt('Enter the backup password.'); if (!password) return; parsed = await decryptBackup(parsed, password); } await useTabStore.getState().importData(parsed); setSyncMessage('Backup imported and merged successfully.'); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } }; reader.readAsText(file); event.target.value = ''; };
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); event.target.value = ''; return; } const reader = new FileReader(); reader.onload = async () => { try { const text = String(reader.result); let parsed = file.name.toLowerCase().endsWith('.csv') ? parseCsvBackup(text) : JSON.parse(text); if (parsed.format === 'mindtabs-encrypted-backup') { const password = window.prompt('Enter the backup password.'); if (!password) return; parsed = await decryptBackup(parsed, password); } setImportPreview(validateBackup(parsed)); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not preview backup.'); } }; reader.readAsText(file); event.target.value = ''; };
+  const confirmImport = async () => { if (!importPreview) return; setImporting(true); try { await useTabStore.getState().importData(importPreview, importMode); setImportPreview(null); setSyncMessage(`Backup ${importMode === 'replace' ? 'replaced' : 'merged'} successfully.`); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } finally { setImporting(false); } };
   const updateSettings = async (next) => {
     const previous = settings;
     const merged = normalizeSettings({ ...previous, ...next });
@@ -234,6 +238,30 @@ function DashboardContent() {
             </div>
         </div>
       </footer>
+
+      {importPreview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-preview-title">
+          <div className="absolute inset-0 bg-black/60" aria-hidden="true" onClick={() => !importing && setImportPreview(null)} />
+          <div className="relative glass rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <h2 id="import-preview-title" className="text-lg font-semibold">Preview backup import</h2>
+            <p className="text-sm text-muted-foreground mt-2">Validated {importPreview.tabs.length} tabs and {importPreview.reminders.length} reminders. Choose how to apply this backup.</p>
+            <div className="grid gap-2 mt-5">
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3 cursor-pointer">
+                <input type="radio" name="import-mode" checked={importMode === 'merge'} onChange={() => setImportMode('merge')} />
+                <span><strong>Merge</strong><br /><small className="text-muted-foreground">Keep existing data and deduplicate normalized URLs.</small></span>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3 cursor-pointer">
+                <input type="radio" name="import-mode" checked={importMode === 'replace'} onChange={() => setImportMode('replace')} />
+                <span><strong>Replace</strong><br /><small className="text-muted-foreground">Delete current tabs and reminders, then use this backup.</small></span>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button type="button" className="btn-secondary" disabled={importing} onClick={() => setImportPreview(null)}>Cancel</button>
+              <button type="button" className="btn-primary" disabled={importing} onClick={confirmImport}>{importing ? 'Importing…' : 'Import backup'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DeleteConfirmModal
         isOpen={showDeleteAll}

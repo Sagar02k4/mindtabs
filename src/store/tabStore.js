@@ -298,12 +298,14 @@ const useTabStore = create((set, get) => ({
     triggerSync();
   },
 
-  importData: async (data) => {
+  importData: async (data, mode = 'merge') => {
     const validated = validateBackup(data);
     const existingTabs = get().tabs;
     const existingReminders = get().reminders;
-    const tabsByUrl = new Map([...existingTabs, ...validated.tabs].map(tab => [normalizeUrl(tab.url), tab]));
-    const remindersById = new Map([...existingReminders, ...validated.reminders].map(reminder => [reminder.id, reminder]));
+    const sourceTabs = mode === 'replace' ? validated.tabs : [...existingTabs, ...validated.tabs];
+    const sourceReminders = mode === 'replace' ? validated.reminders : [...existingReminders, ...validated.reminders];
+    const tabsByUrl = new Map(sourceTabs.map(tab => [normalizeUrl(tab.url), tab]));
+    const remindersById = new Map(sourceReminders.map(reminder => [reminder.id, reminder]));
     await saveData(Array.from(tabsByUrl.values()), Array.from(remindersById.values()));
     await get().init();
     triggerSync();
