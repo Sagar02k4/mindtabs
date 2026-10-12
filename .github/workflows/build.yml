@@ -60,4 +60,4 @@ jobs:
 
       - name: Test and type-check extension
         if: matrix.name == 'Extension'
-        run: npm run test && npm run typecheck
+        run: npm run test && npm run typecheck && npm run lint
