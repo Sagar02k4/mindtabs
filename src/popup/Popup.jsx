@@ -131,7 +131,7 @@ export default function Popup() {
           <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 p-3 text-xs text-amber-200">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
             <span className="flex-1">{actionError}</span>
-            <button onClick={clearActionError} className="text-amber-100 underline">Dismiss</button>
+            <button type="button" onClick={clearActionError} className="text-amber-100 underline">Dismiss</button>
           </div>
         )}
         <div className="flex items-center justify-between mb-4">
@@ -223,6 +223,7 @@ export default function Popup() {
                                 animate-slide-down shadow-xl shadow-black/30">
                     {TAG_OPTIONS.map((option) => (
                       <button
+                        type="button"
                         key={option.id}
                         onClick={() => handleTagSelect(option.id)}
                         className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium
@@ -258,6 +259,7 @@ export default function Popup() {
                                 animate-slide-down shadow-xl shadow-black/30">
                     {REMINDER_PRESETS.map((preset) => (
                       <button
+                        type="button"
                         key={preset.id}
                         onClick={() => handleSetReminder(preset)}
                         className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium
