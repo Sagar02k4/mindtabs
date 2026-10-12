@@ -73,7 +73,7 @@ export function HeroDashboardWrapper({ children, onRefresh, onClearAll, tabsCoun
 						"fade-in slide-in-from-bottom-5 animate-in fill-mode-backwards delay-300 duration-1000 ease-out"
 					)}
 				>
-					<div className="relative rounded-xl border bg-card p-6 shadow-xl ring-1 ring-card min-h-[500px]">
+					<div className="relative rounded-xl border bg-card p-4 shadow-xl ring-1 ring-card min-h-[420px] sm:p-6 md:min-h-[500px]">
                         {/* INJECT ACTUAL DASHBOARD CONTENT HERE */}
                         {children}
 					</div>

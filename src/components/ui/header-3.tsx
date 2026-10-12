@@ -54,14 +54,14 @@ export function Header({ onSignIn }: { onSignIn?: () => void }) {
 					<NavigationMenu className="hidden md:flex ml-4">
 						<NavigationMenuList>
 							<NavigationMenuItem>
-                                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs", "_blank", "noopener,noreferrer")} className="flex items-center gap-2 hover:bg-accent rounded-md text-sm font-medium">
+								<a href="https://github.com/Sagar02k4/MindTabs" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:bg-accent rounded-md text-sm font-medium">
                                     <Github size={16} /> GitHub
-                                </button>
+								</a>
 							</NavigationMenuItem>
                             <NavigationMenuItem>
-                                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs/issues", "_blank", "noopener,noreferrer")} className="flex items-center gap-2 hover:bg-accent rounded-md text-sm font-medium">
+								<a href="https://github.com/Sagar02k4/MindTabs/issues" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:bg-accent rounded-md text-sm font-medium">
                                     <LifeBuoy size={16} /> Support
-                                </button>
+								</a>
                             </NavigationMenuItem>
 						</NavigationMenuList>
 					</NavigationMenu>

@@ -163,7 +163,7 @@ function DashboardContent() {
           tabsCount={tabs.length}
         >
             <div className="flex flex-wrap items-center gap-2 mb-6">
-              <button className="btn-secondary" onClick={() => { const ids = visibleTabs.map(t => t.id); setSelected(new Set(ids)); }}><FolderOpen size={14} /> Select page</button>
+              <button type="button" className="btn-secondary" onClick={() => { const ids = visibleTabs.map(t => t.id); setSelected(new Set(ids)); }}><FolderOpen size={14} /> Select all on this page</button>
               {selected.size > 0 && <><button className="btn-secondary" onClick={openSelected}>Open selected</button><button className="btn-secondary" onClick={saveWorkspace}>Save workspace</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'archive')}>Archive selected</button><button className="btn-secondary" onClick={() => useTabStore.getState().bulkUpdate([...selected], 'unarchive')}>Unarchive selected</button><button className="btn-secondary" onClick={() => setSelected(new Set())}>Clear selection</button></>}
               <button className="btn-secondary" onClick={() => exportData(false)}><Download size={14} /> Export JSON</button>
               <button className="btn-secondary" onClick={() => exportData(false, true)}>Encrypted backup</button>
