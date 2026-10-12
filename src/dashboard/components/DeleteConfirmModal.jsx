@@ -1,21 +1,33 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 import Button from '../../components/Button';
 
 export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, message }) {
+  const closeButtonRef = useRef(null);
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
+        aria-hidden="true"
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
       
       {/* Modal */}
-      <div className="relative glass rounded-2xl p-6 max-w-md w-full animate-scale-in shadow-2xl shadow-black/50">
+      <div role="dialog" aria-modal="true" aria-labelledby="delete-dialog-title" className="relative glass rounded-2xl p-6 max-w-md w-full animate-scale-in shadow-2xl shadow-black/50">
         <button
+          type="button"
+          ref={closeButtonRef}
+          aria-label="Close delete confirmation"
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-surface-700/50 
                     text-surface-400 hover:text-surface-200 transition-colors"
@@ -29,7 +41,7 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, 
             <AlertTriangle size={24} className="text-red-400" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-surface-100">{title || 'Confirm Delete'}</h3>
+            <h3 id="delete-dialog-title" className="text-lg font-semibold text-surface-100">{title || 'Confirm Delete'}</h3>
             <p className="text-sm text-surface-400 mt-1">
               {message || 'This action cannot be undone. Are you sure you want to proceed?'}
             </p>
@@ -37,10 +49,10 @@ export default function DeleteConfirmModal({ isOpen, onClose, onConfirm, title, 
         </div>
 
         <div className="flex gap-3 justify-end">
-          <Button variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="danger" icon={Trash2} onClick={onConfirm}>
+          <Button type="button" variant="danger" icon={Trash2} onClick={onConfirm}>
             Delete
           </Button>
         </div>

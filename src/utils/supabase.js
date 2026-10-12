@@ -17,10 +17,12 @@ export const supabase = isSupabaseConfigured()
  * Check if Supabase is properly configured (not using placeholder values)
  */
 export function isSupabaseConfigured() {
-  return (
-    SUPABASE_URL.startsWith('https://') &&
-    SUPABASE_ANON_KEY.length > 0
-  );
+  try {
+    const url = new URL(SUPABASE_URL);
+    return url.protocol === 'https:' && Boolean(url.hostname) && SUPABASE_ANON_KEY.length >= 20 && !/your_|placeholder|example\.com/i.test(SUPABASE_ANON_KEY);
+  } catch {
+    return false;
+  }
 }
 
 export { SUPABASE_URL };

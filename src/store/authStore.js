@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured, SUPABASE_URL } from '../utils/supabase';
 import { getFromStorage, setToStorage, removeFromStorage } from '../utils/storage';
+import { isMatchingOAuthCallback } from '../utils/authSecurity';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 const AUTH_PORTAL_URL = import.meta.env.VITE_AUTH_PORTAL_URL || '';
@@ -9,7 +10,7 @@ const AUTH_CONFIRMATION_URL = AUTH_PORTAL_BASE_URL ? `${AUTH_PORTAL_BASE_URL}/` 
 const AUTH_RESET_URL = AUTH_PORTAL_BASE_URL ? `${AUTH_PORTAL_BASE_URL}/reset-password` : '';
 let authSubscription = null;
 
-const useAuthStore = create((set, get) => ({
+const useAuthStore = create((set, _get) => ({
   user: null,
   session: null,
   loading: true,
@@ -39,9 +40,9 @@ const useAuthStore = create((set, get) => ({
               isAuthenticated: true,
               error: null,
             });
-          } else if (event === 'SIGNED_OUT') {
+          } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
             removeFromStorage(AUTH_SESSION_KEY);
-            set({ user: null, session: null, isAuthenticated: false });
+            set({ user: null, session: null, isAuthenticated: false, error: 'Your session expired. Please sign in again.' });
           }
         });
         authSubscription = data.subscription;
@@ -72,6 +73,7 @@ const useAuthStore = create((set, get) => ({
         if (error) {
           // Session expired, clear it
           await removeFromStorage(AUTH_SESSION_KEY);
+          set({ user: null, session: null, isAuthenticated: false, error: 'Your session expired. Please sign in again.' });
         }
       }
     } catch (err) {
@@ -110,6 +112,10 @@ const useAuthStore = create((set, get) => ({
           }
         );
       });
+
+      if (!isMatchingOAuthCallback(redirectUrl, responseUrl)) {
+        throw new Error('OAuth callback did not match the extension redirect URL.');
+      }
 
       // Extract tokens from the URL fragment
       const hashParams = new URLSearchParams(

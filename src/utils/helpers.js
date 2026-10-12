@@ -45,13 +45,164 @@ export function extractDomain(url) {
   }
 }
 
+// Treat tracking/query variants of the same page as one saved page.
+export function normalizeUrl(url) {
+  try {
+    const u = new URL(url);
+    if (!isSafePageUrl(u.toString())) return url;
+    u.protocol = u.protocol.toLowerCase();
+    u.hostname = u.hostname.toLowerCase().replace(/^www\./, '');
+    if ((u.protocol === 'http:' && u.port === '80') || (u.protocol === 'https:' && u.port === '443')) u.port = '';
+    u.username = '';
+    u.password = '';
+    u.hash = '';
+    const removable = /^(utm_|fbclid$|gclid$|mc_cid$|mc_eid$|ref$|source$|access_token$|refresh_token$|id_token$|api[_-]?key$|auth[_-]?token$|token$|signature$|sig$)/i;
+    [...u.searchParams.keys()].forEach((key) => {
+      if (removable.test(key)) u.searchParams.delete(key);
+    });
+    u.searchParams.sort();
+    if (u.pathname.length > 1) u.pathname = u.pathname.replace(/\/+$/, '');
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+export function compactTabsByUrl(tabs) {
+  return [...(Array.isArray(tabs) ? tabs : []).reduce((byUrl, tab) => {
+    const existing = byUrl.get(tab.url);
+    if (!existing || tab.updatedAt >= existing.updatedAt) byUrl.set(tab.url, { ...existing, ...tab });
+    return byUrl;
+  }, new Map()).values()];
+}
+
+export function isSafePageUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function sanitizeFaviconUrl(url) {
+  return isSafePageUrl(url) ? String(url) : null;
+}
+
+export function validateBackup(data) {
+  if (!data || !Array.isArray(data.tabs) || !Array.isArray(data.reminders)) {
+    throw new Error('Invalid MindTabs backup format.');
+  }
+  if (data.tabs.length > 10000 || data.reminders.length > 10000) {
+    throw new Error('Backup is too large.');
+  }
+  const tabs = data.tabs.filter(tab => tab && typeof tab === 'object' && isSafePageUrl(tab.url)).map(tab => ({
+    ...tab,
+    id: String(tab.id || generateId()),
+    url: normalizeUrl(tab.url),
+    favicon: sanitizeFaviconUrl(tab.favicon),
+    title: String(tab.title || 'Untitled').slice(0, 500),
+    tag: tab.tag ? String(tab.tag).slice(0, 100) : null,
+  })).filter((tab, index, list) => list.findIndex(candidate => candidate.id === tab.id) === index);
+  const tabIds = new Set(tabs.map(tab => String(tab.id)));
+  const reminders = data.reminders.filter(reminder => (
+    reminder && typeof reminder === 'object' && tabIds.has(String(reminder.tabId))
+    && Number.isFinite(Number(reminder.remindAt)) && Number(reminder.remindAt) > 0
+  )).map(reminder => ({
+    id: String(reminder.id || generateId()),
+    tabId: String(reminder.tabId),
+    remindAt: Number(reminder.remindAt),
+    status: ['pending', 'completed', 'cancelled'].includes(reminder.status) ? reminder.status : 'pending',
+    createdAt: Number(reminder.createdAt) || Date.now(),
+    updatedAt: Number(reminder.updatedAt) || Number(reminder.createdAt) || Date.now(),
+    repeat: ['daily', 'weekly'].includes(reminder.repeat) ? reminder.repeat : null,
+  })).filter((reminder, index, list) => list.findIndex(candidate => candidate.id === reminder.id) === index);
+  return { tabs, reminders };
+}
+
+export function normalizeCloudReminder(row, now = Date.now()) {
+  if (!row || typeof row !== 'object') return null;
+  const remindAt = Number(row.remind_at ?? row.remindAt);
+  const tabId = String(row.tab_id ?? row.tabId ?? '');
+  if (!tabId || !Number.isFinite(remindAt) || remindAt <= 0) return null;
+  const createdAt = Number(row.created_at ?? row.createdAt) || now;
+  return {
+    id: String(row.id || generateId()),
+    tabId,
+    remindAt,
+    status: ['pending', 'completed', 'cancelled'].includes(row.status) ? row.status : 'pending',
+    createdAt,
+    updatedAt: Number(row.updated_at ?? row.updatedAt) || createdAt,
+    repeat: ['daily', 'weekly'].includes(row.repeat) ? row.repeat : null,
+  };
+}
+
+const encodeBytes = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+const decodeBytes = value => Uint8Array.from(atob(value), char => char.charCodeAt(0));
+
+export async function encryptBackup(data, password) {
+  if (!password || password.length < 8) throw new Error('Backup password must be at least 8 characters.');
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(JSON.stringify(data)));
+  return { format: 'mindtabs-encrypted-backup', version: 1, algorithm: 'AES-GCM/PBKDF2-SHA256', salt: encodeBytes(salt), iv: encodeBytes(iv), ciphertext: encodeBytes(ciphertext) };
+}
+
+export async function decryptBackup(envelope, password) {
+  if (!envelope || envelope.format !== 'mindtabs-encrypted-backup' || envelope.version !== 1) throw new Error('Unsupported encrypted backup format.');
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: decodeBytes(envelope.salt), iterations: 120000, hash: 'SHA-256' }, keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  try {
+    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decodeBytes(envelope.iv) }, key, decodeBytes(envelope.ciphertext));
+    return JSON.parse(new TextDecoder().decode(plaintext));
+  } catch {
+    throw new Error('Could not decrypt backup. Check the password.');
+  }
+}
+
+export function parseCsvBackup(csv) {
+  const lines = String(csv).trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error('CSV backup is empty.');
+  const parseLine = line => {
+    const values = []; let value = ''; let quoted = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const char = line[i];
+      if (char === '"' && line[i + 1] === '"' && quoted) { value += '"'; i += 1; }
+      else if (char === '"') quoted = !quoted;
+      else if (char === ',' && !quoted) { values.push(value); value = ''; }
+      else value += char;
+    }
+    values.push(value);
+    return values;
+  };
+  const headers = parseLine(lines[0]).map(header => header.trim().toLowerCase());
+  const titleIndex = headers.indexOf('title'); const urlIndex = headers.indexOf('url');
+  if (titleIndex < 0 || urlIndex < 0) throw new Error('CSV must contain title and url columns.');
+  const tagIndex = headers.indexOf('tag'); const archivedIndex = headers.indexOf('archived');
+  const tabs = lines.slice(1).filter(Boolean).map((line) => { const values = parseLine(line); const now = Date.now(); return { id: `csv-${generateId()}`, title: values[titleIndex], url: values[urlIndex], tag: tagIndex >= 0 ? values[tagIndex] || null : null, isArchived: archivedIndex >= 0 && /^(yes|true|1)$/i.test(values[archivedIndex]), createdAt: now, lastVisited: now, updatedAt: now, tagUpdatedAt: now, archiveUpdatedAt: now }; });
+  return { version: 1, tabs, reminders: [] };
+}
+
+export function escapeCsvCell(value) {
+  const text = String(value ?? '');
+  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
 /**
  * Get favicon URL for a given page URL
  */
 export function getFaviconUrl(url) {
   try {
-    const u = new URL(url);
-    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
+    if (!isSafePageUrl(url)) return null;
+    // Ask the site itself for its favicon. Never substitute the MindTabs logo:
+    // a missing site icon should render as a neutral placeholder instead.
+    const origin = new URL(url).origin;
+    return `${origin}/favicon.ico`;
   } catch {
     return null;
   }
@@ -61,7 +212,8 @@ export function getFaviconUrl(url) {
  * Generate a unique ID
  */
 export function generateId() {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 export function getUserIdFromAccessToken(accessToken) {
@@ -70,7 +222,9 @@ export function getUserIdFromAccessToken(accessToken) {
     if (!payload) return null;
     const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + ((4 - base64.length % 4) % 4), '=');
-    return JSON.parse(atob(padded))?.sub || null;
+    const claims = JSON.parse(atob(padded));
+    if (Number.isFinite(Number(claims.exp)) && Number(claims.exp) * 1000 <= Date.now()) return null;
+    return claims?.sub || null;
   } catch {
     return null;
   }
@@ -99,6 +253,30 @@ export function shouldExcludeUrl(url) {
     'chrome-search://',
   ];
   return excludedPatterns.some(pattern => url.startsWith(pattern));
+}
+
+export function isBlockedDomain(url, blockedDomains = []) {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return blockedDomains.some(domain => {
+      const normalized = normalizeBlockedDomain(domain);
+      return normalized && (hostname === normalized || hostname.endsWith(`.${normalized}`));
+    });
+  } catch {
+    return true;
+  }
+}
+
+export function normalizeBlockedDomain(value) {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return null;
+  try {
+    const candidate = raw.includes('://') ? new URL(raw).hostname : raw.replace(/^\.+/, '');
+    if (!candidate || candidate.includes('/') || candidate.includes(':') || candidate.includes(' ')) return null;
+    return candidate;
+  } catch {
+    return null;
+  }
 }
 
 /**

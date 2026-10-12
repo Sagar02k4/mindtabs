@@ -57,7 +57,7 @@ const LandingPage = () => {
             <span className="font-bold text-xl tracking-tight text-foreground">MindTabs</span>
           </div>
           <button 
-            onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank')}
+            onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank', 'noopener,noreferrer')}
             className="text-sm font-medium hover:text-primary transition-colors cursor-pointer"
           >
             Get from GitHub
@@ -82,10 +82,7 @@ const LandingPage = () => {
           </motion.div>
           
           <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mb-6 leading-[1.05] text-balance">
-            Turn tab chaos into <br/>
-            <span className="text-primary">
-              Reclaim your focus.
-            </span>
+            Turn tab chaos into <span className="text-primary">reclaimable focus.</span>
           </motion.h1>
           
           <motion.p variants={itemVariants} className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -94,7 +91,7 @@ const LandingPage = () => {
           
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button 
-              onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank')}
+            onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank', 'noopener,noreferrer')}
               className="w-full sm:w-auto px-8 py-4 bg-primary text-white rounded-full font-semibold flex items-center justify-center gap-2 hover:bg-primary-hover hover:shadow-lg hover:shadow-primary/25 transition-all hover:-translate-y-0.5 cursor-pointer"
             >
               <Download className="w-5 h-5" />
@@ -108,15 +105,31 @@ const LandingPage = () => {
           </motion.div>
         </motion.div>
 
-        {/* Floating Abstract UI */}
+        {/* Product preview mirrors the extension's actual workspace UI. */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.8 }}
           className="mt-20 relative max-w-5xl mx-auto"
         >
-          <div className="aspect-[16/9] rounded-3xl bg-gradient-to-tr from-gray-100 to-white border border-gray-200 shadow-2xl overflow-hidden relative ring-1 ring-black/5">
-             <img src="/dashboard-mockup.png" alt="MindTabs Dashboard Preview" className="w-full h-full object-cover" />
+          <div className="rounded-[28px] bg-slate-950 p-2 sm:p-3 shadow-2xl shadow-primary/20 ring-1 ring-slate-900/10">
+            <div className="overflow-hidden rounded-[20px] bg-slate-900">
+              <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-400" /><span className="h-2.5 w-2.5 rounded-full bg-amber-300" /><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                <span className="ml-3 truncate text-xs text-slate-400">MindTabs · Workspace</span>
+                <span className="ml-auto rounded-full bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-300">SYNCED</span>
+              </div>
+              <div className="grid min-h-[270px] grid-cols-1 gap-4 p-4 sm:grid-cols-[180px_1fr] sm:p-6">
+                <aside className="hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:block">
+                  <div className="mb-8 flex items-center gap-2 text-sm font-bold text-white"><span className="grid h-7 w-7 place-items-center rounded-lg bg-primary text-xs">M</span> MindTabs</div>
+                  <div className="space-y-2 text-xs text-slate-400"><div className="rounded-lg bg-primary/20 px-3 py-2 font-semibold text-white">All tabs</div><div className="px-3 py-2">Reminders</div><div className="px-3 py-2">Archived</div></div>
+                </aside>
+                <div>
+                  <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-xs font-medium text-primary-300">TODAY&apos;S WORKSPACE</p><h3 className="mt-1 text-xl font-bold text-white sm:text-2xl">Keep the context, lose the clutter.</h3></div><span className="hidden rounded-lg border border-white/10 px-3 py-2 text-xs text-slate-300 sm:inline-flex">Search tabs</span></div>
+                  <div className="grid gap-3 md:grid-cols-2"><div className="rounded-2xl border border-primary/30 bg-primary/10 p-4"><div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold text-primary-200">FOCUS</span><span className="text-[10px] text-slate-400">3 tabs</span></div><p className="text-sm font-semibold text-white">Product roadmap</p><p className="mt-1 truncate text-xs text-slate-400">docs.example.com/roadmap</p><div className="mt-4 flex items-center gap-2 text-[10px] text-slate-400"><span className="rounded-full bg-amber-400/15 px-2 py-1 text-amber-200">Reminder in 2h</span><span>Saved just now</span></div></div><div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4"><div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold text-cyan-200">RESEARCH</span><span className="text-[10px] text-slate-400">5 tabs</span></div><p className="text-sm font-semibold text-white">Design references</p><p className="mt-1 truncate text-xs text-slate-400">mindtabs.app/inspiration</p><div className="mt-4 flex items-center gap-2 text-[10px] text-slate-400"><span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-200">Synced</span><span>2 devices</span></div></div></div>
+                </div>
+              </div>
+            </div>
           </div>
           
           {/* Decorative blurs */}
@@ -128,7 +141,7 @@ const LandingPage = () => {
       <section id="features" className="py-24 bg-white border-y border-gray-100">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Why use MindTabs?</h2>
+            <h2 className="text-3xl font-bold mb-4">A calmer way to browse.</h2>
             <p className="text-gray-500 max-w-2xl mx-auto">Everything you need to manage your browsing experience, right in your toolbar.</p>
           </div>
           
@@ -172,7 +185,7 @@ const LandingPage = () => {
         </div>
 
         <button 
-          onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank')}
+          onClick={() => window.open('https://github.com/Sagar02k4/MindTabs/releases', '_blank', 'noopener,noreferrer')}
           className="px-10 py-5 bg-foreground text-white rounded-full font-bold text-lg inline-flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-xl cursor-pointer"
         >
           Download Source Code <ArrowRight className="w-5 h-5" />

@@ -1,4 +1,3 @@
-import React from 'react';
 import { TAG_OPTIONS } from '../utils/constants';
 
 export default function TagBadge({ tag, size = 'sm', onClick, removable = false, onRemove }) {

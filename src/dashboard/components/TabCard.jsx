@@ -1,24 +1,37 @@
-import React, { useState } from 'react';
-import { ExternalLink, Trash2, Bell, Tag, Clock, MoreVertical, X, FolderInput, Archive, XCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Trash2, Bell, Clock, X, Archive, XCircle } from 'lucide-react';
 import useTabStore from '../../store/tabStore';
 import TagBadge from '../../components/TagBadge';
-import { TAG_OPTIONS, REMINDER_PRESETS } from '../../utils/constants';
+import { REMINDER_PRESETS } from '../../utils/constants';
 import { extractDomain, timeAgo, getFaviconUrl, formatDate } from '../../utils/helpers';
 
 export default function TabCard({ tab, index }) {
-  const [showActions, setShowActions] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
-  const { updateTag, removeTab, setReminder, getReminderForTab, toggleArchive } = useTabStore();
+  const [repeat, setRepeat] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const cancelDeleteRef = useRef(null);
+  const { updateTag, removeTab, setReminder, resetReminder, getReminderForTab, toggleArchive } = useTabStore();
 
   const reminder = getReminderForTab(tab.id);
+
+  useEffect(() => {
+    if (!showDeleteConfirm) return undefined;
+    cancelDeleteRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setShowDeleteConfirm(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showDeleteConfirm]);
 
   const handleOpenTab = () => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       chrome.tabs.create({ url: tab.url });
     } else {
-      window.open(tab.url, '_blank');
+      window.open(tab.url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -32,14 +45,9 @@ export default function TabCard({ tab, index }) {
     }
   };
 
-  const handleTagSelect = async (tagId) => {
-    await updateTag(tab.id, tagId === tab.tag ? null : tagId);
-    setShowTagPicker(false);
-  };
-
   const handleSetReminder = async (preset) => {
     if (preset.id === 'custom') return;
-    await setReminder(tab.id, preset.getTime());
+    await (reminder ? resetReminder(tab.id, preset.getTime(), repeat || null) : setReminder(tab.id, preset.getTime(), repeat || null));
     setShowReminderPicker(false);
   };
 
@@ -47,7 +55,7 @@ export default function TabCard({ tab, index }) {
     if (!customDateTime) return;
     const time = new Date(customDateTime).getTime();
     if (time <= Date.now()) return;
-    await setReminder(tab.id, time);
+    await (reminder ? resetReminder(tab.id, time, repeat || null) : setReminder(tab.id, time, repeat || null));
     setShowReminderPicker(false);
     setCustomDateTime('');
   };
@@ -60,27 +68,28 @@ export default function TabCard({ tab, index }) {
       <div className="flex items-start gap-4">
         {/* Favicon */}
         <div className="w-10 h-10 rounded-lg bg-surface-700/50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          <img 
+          {imageFailed ? <span className="text-xs text-surface-400" aria-hidden="true">🌐</span> : <img
             src={tab.favicon || getFaviconUrl(tab.url)}
             alt=""
             className="w-6 h-6 rounded"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.parentElement.innerHTML = '<span class="text-xs text-surface-400">🌐</span>';
+            onError={() => {
+              setImageFailed(true);
             }}
-          />
+          />}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <h3 
-            className="text-sm font-semibold text-surface-100 truncate cursor-pointer
+          <button
+            type="button"
+            className="block text-left text-sm font-semibold text-surface-100 truncate cursor-pointer
                       hover:text-primary-300 transition-colors"
             onClick={handleOpenTab}
             title={tab.title}
+            aria-label={`Open ${tab.title}`}
           >
             {tab.title}
-          </h3>
+          </button>
           <p className="text-xs text-surface-400 truncate mt-0.5">{extractDomain(tab.url)}</p>
           
           <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -105,32 +114,40 @@ export default function TabCard({ tab, index }) {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 opacity-100 transition-opacity">
           <button
+            type="button"
             onClick={() => toggleArchive(tab.id)}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-purple-400 transition-colors"
             title={tab.isArchived ? "Unarchive" : "Archive"}
+            aria-label={tab.isArchived ? "Unarchive saved page" : "Archive saved page"}
           >
             <Archive size={14} />
           </button>
           <button
+            type="button"
             onClick={() => { setShowReminderPicker(!showReminderPicker); setShowTagPicker(false); }}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-amber-400 transition-colors"
-            title="Set Reminder"
+            title={reminder ? "Reset Reminder" : "Set Reminder"}
+            aria-label={reminder ? "Reset reminder" : "Set reminder"}
           >
             <Bell size={14} />
           </button>
           <button
+            type="button"
             onClick={handleCloseChromeTab}
             className="p-2 rounded-lg hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
             title="Close Tab in Browser"
+            aria-label="Close this page in the browser"
           >
             <XCircle size={14} />
           </button>
           <button
-            onClick={() => removeTab(tab.id)}
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
             className="p-2 rounded-lg hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
             title="Delete from Dashboard"
+            aria-label="Delete saved page"
           >
             <Trash2 size={14} />
           </button>
@@ -142,8 +159,8 @@ export default function TabCard({ tab, index }) {
         <div className="absolute right-4 top-14 z-50 glass rounded-xl p-2 min-w-[200px] 
                       animate-scale-in shadow-xl shadow-black/40">
           <div className="flex items-center justify-between px-2 pb-1 mb-1 border-b border-surface-700/50">
-            <span className="text-xs text-surface-400 font-medium">Set Reminder</span>
-            <button onClick={() => setShowReminderPicker(false)} className="text-surface-500 hover:text-surface-300">
+            <span className="text-xs text-surface-400 font-medium">{reminder ? 'Reset Reminder' : 'Set Reminder'}</span>
+            <button type="button" onClick={() => setShowReminderPicker(false)} aria-label="Close reminder menu" className="text-surface-500 hover:text-surface-300">
               <X size={12} />
             </button>
           </div>
@@ -162,17 +179,35 @@ export default function TabCard({ tab, index }) {
           <div className="mt-1 pt-1 border-t border-surface-700/50 space-y-1.5 p-1">
             <input 
               type="datetime-local"
+              aria-label="Custom reminder date and time"
               value={customDateTime}
               onChange={(e) => setCustomDateTime(e.target.value)}
               className="input-field text-xs"
             />
+            <select aria-label="Reminder repeat frequency" value={repeat} onChange={e => setRepeat(e.target.value)} className="input-field text-xs">
+              <option value="">No repeat</option><option value="daily">Repeat daily</option><option value="weekly">Repeat weekly</option>
+            </select>
             <button
+              type="button"
               onClick={handleCustomReminder}
               disabled={!customDateTime}
               className="btn-primary w-full text-xs py-1.5"
             >
               Set Custom
             </button>
+          </div>
+        </div>
+      )}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowDeleteConfirm(false)} />
+          <div role="dialog" aria-modal="true" aria-labelledby={`delete-tab-title-${tab.id}`} className="relative glass rounded-xl p-5 max-w-sm w-full shadow-2xl">
+            <h3 id={`delete-tab-title-${tab.id}`} className="font-semibold text-surface-100">Delete this saved page?</h3>
+            <p className="text-sm text-surface-400 mt-2">{reminder ? 'This tab has a reminder. Delete the tab and its reminder?' : 'This cannot be undone.'}</p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button type="button" ref={cancelDeleteRef} className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>No</button>
+              <button type="button" className="btn-danger" onClick={() => { removeTab(tab.id); setShowDeleteConfirm(false); }}>Yes, delete</button>
+            </div>
           </div>
         </div>
       )}

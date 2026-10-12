@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { 
-  BookmarkPlus, Tag, Clock, LayoutDashboard, Trash2, AlertCircle,
-  ExternalLink, Bell, Check, Sparkles, ChevronDown, Cloud, User 
+  BookmarkPlus, Tag, LayoutDashboard, Trash2, AlertCircle,
+  ExternalLink, Bell, Check, Sparkles, ChevronDown, Cloud
 } from 'lucide-react';
 import useTabStore from '../store/tabStore';
 import useAuthStore from '../store/authStore';
@@ -10,6 +10,7 @@ import TagBadge from '../components/TagBadge';
 import Button from '../components/Button';
 import { TAG_OPTIONS, REMINDER_PRESETS } from '../utils/constants';
 import { extractDomain, timeAgo, getFaviconUrl } from '../utils/helpers';
+import { getSettings, saveSettings } from '../utils/storage';
 
 export default function Popup() {
   const [currentTab, setCurrentTab] = useState(null);
@@ -17,8 +18,9 @@ export default function Popup() {
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
   const [recentTabs, setRecentTabs] = useState([]);
+  const [trackingEnabled, setTrackingEnabled] = useState(false);
   const menuRootRef = useRef(null);
-  const { tabs, reminders, init, addTab, updateTag, setReminder, removeTab, getStats, actionError, clearActionError } = useTabStore();
+  const { tabs, init, addTab, updateTag, setReminder, removeTab, getStats, actionError, clearActionError } = useTabStore();
 
   const { isAuthenticated, user, restoreSession } = useAuthStore();
 
@@ -28,6 +30,7 @@ export default function Popup() {
         await restoreSession();
       }
       await init();
+      setTrackingEnabled((await getSettings()).tracking);
     };
     bootstrap();
     // Get the current active tab
@@ -38,7 +41,7 @@ export default function Popup() {
         }
       });
     }
-  }, []);
+  }, [init, restoreSession]);
 
   useEffect(() => {
     // Show 5 most recent tabs
@@ -123,6 +126,13 @@ export default function Popup() {
     }
   };
 
+  const toggleTracking = async () => {
+    const next = !trackingEnabled;
+    const settings = await getSettings();
+    await saveSettings({ ...settings, tracking: next, onboardingComplete: true });
+    setTrackingEnabled(next);
+  };
+
   return (
     <div className="flex flex-col h-full min-h-[520px]">
       {/* Header */}
@@ -131,7 +141,7 @@ export default function Popup() {
           <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 p-3 text-xs text-amber-200">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
             <span className="flex-1">{actionError}</span>
-            <button onClick={clearActionError} className="text-amber-100 underline">Dismiss</button>
+            <button type="button" onClick={clearActionError} className="text-amber-100 underline">Dismiss</button>
           </div>
         )}
         <div className="flex items-center justify-between mb-4">
@@ -140,7 +150,7 @@ export default function Popup() {
                           flex items-center justify-center shadow-lg shadow-primary-500/25">
               <Sparkles size={18} className="text-white" />
             </div>
-            <h1 className="text-lg font-bold gradient-text">MindTabs</h1>
+            <h1 className="text-lg font-bold text-primary-300">MindTabs</h1>
           </div>
           <div className="flex items-center gap-1">
             {isAuthenticated && (
@@ -223,6 +233,7 @@ export default function Popup() {
                                 animate-slide-down shadow-xl shadow-black/30">
                     {TAG_OPTIONS.map((option) => (
                       <button
+                        type="button"
                         key={option.id}
                         onClick={() => handleTagSelect(option.id)}
                         className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium
@@ -258,6 +269,7 @@ export default function Popup() {
                                 animate-slide-down shadow-xl shadow-black/30">
                     {REMINDER_PRESETS.map((preset) => (
                       <button
+                        type="button"
                         key={preset.id}
                         onClick={() => handleSetReminder(preset)}
                         className="w-full text-left px-3 py-2 rounded-lg text-xs font-medium
@@ -272,6 +284,7 @@ export default function Popup() {
                     <div className="mt-1 pt-1 border-t border-surface-700/50">
                       <input 
                         type="datetime-local"
+                        aria-label="Custom reminder date and time"
                         value={customDateTime}
                         onChange={(e) => setCustomDateTime(e.target.value)}
                         className="input-field text-xs mb-1.5"
@@ -329,15 +342,17 @@ export default function Popup() {
                   </div>
                 </div>
                 {tab.tag && <TagBadge tag={tab.tag} size="sm" />}
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                   <button 
                     onClick={() => { if (typeof chrome !== 'undefined') chrome.tabs.create({ url: tab.url }); }}
+                    aria-label={`Open ${tab.title}`}
                     className="p-1 rounded hover:bg-surface-700/50 text-surface-400 hover:text-surface-200 transition-colors"
                   >
                     <ExternalLink size={12} />
                   </button>
                   <button 
                     onClick={() => removeTab(tab.id)}
+                    aria-label={`Delete ${tab.title}`}
                     className="p-1 rounded hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
                   >
                     <Trash2 size={12} />
@@ -351,6 +366,14 @@ export default function Popup() {
 
       {/* Footer */}
       <div className="px-5 py-3 border-t border-surface-800/50">
+        <button
+          type="button"
+          onClick={toggleTracking}
+          aria-pressed={trackingEnabled}
+          className="w-full mb-2 rounded-lg border border-surface-700/60 px-3 py-2 text-xs text-surface-300 hover:bg-surface-800/50 transition-colors"
+        >
+          {trackingEnabled ? 'Pause tab tracking' : 'Resume tab tracking'}
+        </button>
         <Button 
           variant="primary" 
           className="w-full"

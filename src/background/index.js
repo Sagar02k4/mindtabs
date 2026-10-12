@@ -1,7 +1,10 @@
-import { shouldExcludeUrl, generateId, getUserIdFromAccessToken } from '../utils/helpers';
-import { getAllTabs, saveTabs, getAllReminders, saveReminders, getFromStorage } from '../utils/storage';
+import { shouldExcludeUrl, generateId, getUserIdFromAccessToken, normalizeUrl, isSafePageUrl, isBlockedDomain, sanitizeFaviconUrl } from '../utils/helpers';
+import { CLEANUP_ALARM, CLEANUP_AFTER_DAYS } from '../utils/constants';
+import { getAllTabs, saveTabs, saveData, getAllReminders, saveReminders, getFromStorage, getSettings, getDeletedTabs, saveDeletedTabs } from '../utils/storage';
 import { fullSync } from '../utils/syncService';
 import { isSupabaseConfigured } from '../utils/supabase';
+import { scheduleReminderAlarms, advanceRecurringReminder, filterRemindersForTabs } from '../utils/reminders';
+import { retainTabsByPolicy } from '../utils/retention';
 
 const AUTH_SESSION_KEY = 'mindtabs_auth_session';
 
@@ -11,62 +14,93 @@ const AUTH_SESSION_KEY = 'mindtabs_auth_session';
  * Track a new tab when it's created/updated with a valid URL
  */
 async function trackTab(tab) {
+  const settings = await getSettings();
+  if (settings.tracking !== true || settings.onboardingComplete !== true) return;
   // Skip incognito tabs
   if (tab.incognito) return;
   
   // Skip tabs without URLs or with excluded URLs
-  if (!tab.url || shouldExcludeUrl(tab.url)) return;
+  if (!tab.url || shouldExcludeUrl(tab.url) || !isSafePageUrl(tab.url) || isBlockedDomain(tab.url, settings.blockedDomains)) return;
   
   // Skip pending/loading tabs without titles
   if (tab.status === 'loading' && !tab.title) return;
 
   const tabs = await getAllTabs();
+  const normalizedUrl = normalizeUrl(tab.url);
   
   // Check if this URL is already tracked
-  const existingIndex = tabs.findIndex(t => t.url === tab.url);
+  const existingIndex = tabs.findIndex(t => normalizeUrl(t.url) === normalizedUrl);
   
   if (existingIndex >= 0) {
     // Update existing entry
     tabs[existingIndex] = {
       ...tabs[existingIndex],
       title: tab.title || tabs[existingIndex].title,
-      favicon: tab.favIconUrl || tabs[existingIndex].favicon,
+      favicon: sanitizeFaviconUrl(tab.favIconUrl) || tabs[existingIndex].favicon,
       lastVisited: Date.now(),
+      updatedAt: Date.now(),
     };
   } else {
     // Add new entry
     tabs.unshift({
       id: generateId(),
       title: tab.title || 'Untitled',
-      url: tab.url,
-      favicon: tab.favIconUrl || null,
+      url: normalizedUrl,
+      favicon: sanitizeFaviconUrl(tab.favIconUrl),
       tag: null,
       createdAt: Date.now(),
       lastVisited: Date.now(),
+      updatedAt: Date.now(),
+      tagUpdatedAt: Date.now(),
+      archiveUpdatedAt: Date.now(),
     });
   }
 
   await saveTabs(tabs);
 }
 
+// Chrome can emit several update events for one navigation. Serialize reads and
+// writes so concurrent events cannot append duplicate records.
+let trackingQueue = Promise.resolve();
+function queueTrackTab(tab) {
+  trackingQueue = trackingQueue
+    .then(() => trackTab(tab))
+    .catch((error) => console.error('MindTabs tab tracking failed:', error));
+  return trackingQueue;
+}
+
 // Listen for tab updates (when URL changes or page finishes loading)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    trackTab(tab);
+    queueTrackTab(tab);
   }
 });
 
 // Listen for new tabs
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.url && tab.url !== 'chrome://newtab/') {
-    trackTab(tab);
+    queueTrackTab(tab);
   }
 });
 
 
 // ─── Reminders / Alarms ─────────────────────────────────────────
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
+async function handleAlarm(alarm) {
+  if (alarm.name === CLEANUP_ALARM) {
+    const settings = await getSettings();
+    const cutoff = Date.now() - (Number(settings.retentionDays) || CLEANUP_AFTER_DAYS) * 24 * 60 * 60 * 1000;
+    const [tabs, reminders, deletedTabs] = await Promise.all([getAllTabs(), getAllReminders(), getDeletedTabs()]);
+    const retained = retainTabsByPolicy(tabs, reminders, cutoff);
+    const retainedReminders = filterRemindersForTabs(reminders, retained);
+    const retainedDeletedTabs = deletedTabs.filter(item => Number(item.deletedAt) >= cutoff);
+    if (retained.length !== tabs.length || retainedReminders.length !== reminders.length) {
+      await saveData(retained, retainedReminders);
+      await scheduleReminderAlarms(retainedReminders, chrome.alarms);
+    }
+    if (retainedDeletedTabs.length !== deletedTabs.length) await saveDeletedTabs(retainedDeletedTabs);
+    return;
+  }
   if (alarm.name === 'sync-alarm') {
     if (!isSupabaseConfigured()) return;
     const session = await getFromStorage(AUTH_SESSION_KEY);
@@ -96,26 +130,44 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const tab = tabs.find(t => t.id === reminder.tabId);
 
   if (tab) {
-    // Show notification
-    chrome.notifications.create(`notif-${reminder.id}`, {
-      type: 'basic',
-      iconUrl: tab.favicon || 'icons/icon128.png',
-      title: '🔔 MindTabs Reminder',
-      message: `Time to revisit: ${tab.title}`,
-      buttons: [{ title: 'Open Tab' }],
-      priority: 2,
-    });
+    const settings = await getSettings();
+    if (settings.notifications !== false) {
+      // Notification delivery is best-effort. It must not prevent the
+      // reminder from being completed or rescheduled when the API rejects it.
+      try {
+        await chrome.notifications.create(`notif-${reminder.id}`, {
+          type: 'basic',
+          // Keep notification rendering local; never make Chrome fetch a
+          // user-tracked page's external favicon at reminder time.
+          iconUrl: 'icons/icon128.png',
+          title: '🔔 MindTabs Reminder',
+          message: `Time to revisit: ${tab.title}`,
+          buttons: [{ title: 'Open Tab' }],
+          priority: 2,
+        });
+      } catch (error) {
+        console.warn('MindTabs notification delivery failed:', error);
+      }
+    }
   }
 
-  // Mark reminder as completed
+  // Mark reminder complete, or advance the next recurring occurrence.
   const updatedReminders = reminders.map(r =>
-    r.id === reminderId ? { ...r, status: 'completed' } : r
+    r.id === reminderId ? advanceRecurringReminder(r) : r
   );
+  const updatedReminder = updatedReminders.find(r => r.id === reminderId);
+  if (updatedReminder?.status === 'pending') await chrome.alarms.create(`reminder-${reminder.id}`, { when: updatedReminder.remindAt });
   await saveReminders(updatedReminders);
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  handleAlarm(alarm).catch((error) => {
+    console.error('MindTabs alarm handler failed:', error);
+  });
 });
 
 // Handle notification clicks
-chrome.notifications.onClicked.addListener(async (notificationId) => {
+async function handleNotificationClick(notificationId) {
   if (!notificationId.startsWith('notif-')) return;
   
   const reminderId = notificationId.replace('notif-', '');
@@ -132,9 +184,15 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
   }
   
   chrome.notifications.clear(notificationId);
+}
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  handleNotificationClick(notificationId).catch((error) => {
+    console.error('MindTabs notification click failed:', error);
+  });
 });
 
-chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIndex) => {
+async function handleNotificationButtonClick(notificationId, buttonIndex) {
   if (!notificationId.startsWith('notif-')) return;
   if (buttonIndex !== 0) return;
 
@@ -152,6 +210,12 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
   }
   
   chrome.notifications.clear(notificationId);
+}
+
+chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+  handleNotificationButtonClick(notificationId, buttonIndex).catch((error) => {
+    console.error('MindTabs notification action failed:', error);
+  });
 });
 
 
@@ -159,20 +223,74 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, buttonIn
 
 async function importOpenTabs() {
   const openTabs = await chrome.tabs.query({ windowType: 'normal' });
-  await Promise.all(openTabs.map(trackTab));
+  await Promise.all(openTabs.map(queueTrackTab));
 }
 
-chrome.runtime.onInstalled.addListener(async (details) => {
+async function handleInstalled(details) {
   if (details.reason === 'install') {
     console.log('MindTabs installed successfully!');
   }
-  chrome.alarms.create('sync-alarm', { periodInMinutes: 5 });
+  const settings = await getSettings();
+  chrome.alarms.create('sync-alarm', { periodInMinutes: Number(settings.syncIntervalMinutes) || 5 });
+  chrome.alarms.create(CLEANUP_ALARM, { periodInMinutes: 7 * 24 * 60 });
+  await restoreReminderAlarms();
   await importOpenTabs();
+  chrome.contextMenus.removeAll(() => chrome.contextMenus.create({ id: 'mindtabs-save-page', title: 'Save page to MindTabs', contexts: ['page'] }));
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+  handleInstalled(details).catch((error) => {
+    console.error('MindTabs install setup failed:', error);
+  });
 });
 
-chrome.runtime.onStartup.addListener(async () => {
-  chrome.alarms.create('sync-alarm', { periodInMinutes: 5 });
+async function handleStartup() {
+  const settings = await getSettings();
+  chrome.alarms.create('sync-alarm', { periodInMinutes: Number(settings.syncIntervalMinutes) || 5 });
+  chrome.alarms.create(CLEANUP_ALARM, { periodInMinutes: 7 * 24 * 60 });
+  await restoreReminderAlarms();
   await importOpenTabs();
+}
+
+chrome.runtime.onStartup.addListener(() => {
+  handleStartup().catch((error) => {
+    console.error('MindTabs startup setup failed:', error);
+  });
+});
+
+async function handleContextMenuClick(info, tab) {
+  if (info.menuItemId === 'mindtabs-save-page' && tab) await queueTrackTab(tab);
+}
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  handleContextMenuClick(info, tab).catch((error) => {
+    console.error('MindTabs context-menu action failed:', error);
+  });
+});
+
+async function handleCommand(command) {
+  if (command === 'open-dashboard') chrome.runtime.openOptionsPage();
+  if (command === 'save-current-tab') {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) await queueTrackTab(tab);
+  }
+}
+
+chrome.commands.onCommand.addListener((command) => {
+  handleCommand(command).catch((error) => {
+    console.error('MindTabs command failed:', error);
+  });
+});
+
+async function restoreReminderAlarms() {
+  const [reminders, tabs] = await Promise.all([getAllReminders(), getAllTabs()]);
+  await scheduleReminderAlarms(filterRemindersForTabs(reminders, tabs), chrome.alarms);
+}
+
+// A service worker can be rehydrated without a browser startup event. Reconcile
+// alarms on every worker load so future reminders are never left unscheduled.
+restoreReminderAlarms().catch((error) => {
+  console.error('MindTabs reminder restoration failed:', error);
 });
 
 console.log('MindTabs background service worker loaded');

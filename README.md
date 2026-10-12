@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150" alt="MindTabs Logo" width="120" />
+  <img src="public/icons/icon128.png" alt="MindTabs Logo" width="120" />
   <h1>MindTabs</h1>
   <p><em>Gain clarity. Reduce tab overload. Reclaim your focus.</em></p>
 
@@ -23,10 +23,15 @@
 - **Smart Reminders**: Don't lose track of important pages. Set a reminder to revisit a specific tab later.
 - **Cloud Sync**: Securely sync your tab data across devices using Supabase Authentication and Database.
 - **Non-Intrusive Popup**: A beautiful, minimal popup to quickly save your current mindset without breaking your flow.
+- **Recurring Reminders**: Repeat reminders daily or weekly, with alarms restored after browser restarts.
+- **Workspaces & Bulk Actions**: Save tab groups, restore them later, and archive or open selected pages together.
+- **Privacy Controls**: First-run consent, blocked domains, normalized URLs, retention cleanup, and local/cloud data controls.
+- **Portable Backups**: Export/import validated JSON and CSV backups, including password-protected encrypted backups.
+- **Accessible Responsive UI**: Keyboard-friendly dialogs and actions with layouts that work across popup, desktop, and touch sizes.
 
 ## 🛠 Tech Stack
 Built with modern web technologies for blazing-fast performance:
-- **Framework**: [React 18](https://reactjs.org/)
+- **Framework**: [React 18](https://react.dev/)
 - **Build Tool**: [Vite](https://vitejs.dev/) + [CRXJS](https://crxjs.dev/vite-plugin) for seamless Chrome Extension development
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **State Management**: [Zustand](https://github.com/pmndrs/zustand)
@@ -123,6 +128,22 @@ npm run dev
 ```
 Any changes you make to the source code will automatically reflect in the loaded extension.
 
+For a release-quality local check, run:
+
+```bash
+npm run check
+npm --prefix WebAuthPortal run lint
+npm --prefix WebAuthPortal run build
+```
+
+## 🔐 Privacy and data controls
+
+MindTabs may store page titles, normalized URLs, tags, archive state, and reminders in Chrome storage. If cloud sync is enabled, this metadata is also stored in the configured Supabase project under the authenticated user's account. Users can pause tracking, configure domains that should never be tracked, disable notifications, export their data, import a validated backup, and delete all local data from the dashboard. Do not enable tracking on devices where browsing metadata cannot be stored safely.
+
+Only `http` and `https` pages are accepted. Executable URL schemes such as `javascript:`, `data:`, and `file:` are rejected by the import and save flows.
+
+Before production release, review the Supabase RLS policies, run the versioned schema migration, configure the deployed auth portal origin, and run `npm audit --audit-level=high` in CI.
+
 ## 🤝 Contributing
 Contributions, issues, and feature requests are welcome!
 
@@ -134,3 +155,5 @@ Contributions, issues, and feature requests are welcome!
 
 ## 📄 License
 This project is licensed under the MIT License.
+
+See [SECURITY.md](SECURITY.md) for privacy and security behavior and [docs/operations.md](docs/operations.md) for release and recovery procedures.

@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { Sparkles, Trash2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Sparkles, Trash2, RefreshCw, AlertCircle, Download, Upload, FolderOpen, Bell, Clock, Settings } from 'lucide-react';
 import useTabStore from '../store/tabStore';
 import useAuthStore from '../store/authStore';
 import { isSupabaseConfigured } from '../utils/supabase';
 import { fullSync } from '../utils/syncService';
+import { getSettings, saveSettings, getWorkspaces } from '../utils/storage';
+import { normalizeSettings } from '../utils/settings';
+import { encryptBackup, decryptBackup, parseCsvBackup, escapeCsvCell, validateBackup, formatDate } from '../utils/helpers';
 import SearchBar from './components/SearchBar';
 import FilterSidebar from './components/FilterSidebar';
 import StatsCards from './components/StatsCards';
@@ -17,11 +20,24 @@ import AuthPage from './components/AuthPage';
 
 function DashboardContent() {
   const navigate = useNavigate();
-  const { tabs, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, actionError, clearActionError } = useTabStore();
+  const { tabs, reminders, lastDeleted, undoLastDelete, loading: tabsLoading, init, getFilteredTabs, deleteAllData, searchQuery, activeTag, sortBy, actionError, clearActionError } = useTabStore();
   const { isAuthenticated, user, loading: authLoading, restoreSession } = useAuthStore();
   const [showDeleteAll, setShowDeleteAll] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const filteredTabs = getFilteredTabs();
+  const [page, setPage] = useState(1);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [selected, setSelected] = useState(new Set());
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState({ theme: 'dark', tracking: false, notifications: true, onboardingComplete: false, retentionDays: 90, syncIntervalMinutes: 5, blockedDomains: [] as string[] });
+  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [importPreview, setImportPreview] = useState<{ tabs: any[]; reminders: any[] } | null>(null);
+  const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
+  const [importing, setImporting] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const pageSize = 20;
+  const filteredTabs = useMemo(() => getFilteredTabs(), [getFilteredTabs, tabs, searchQuery, activeTag, sortBy]);
+  const pageCount = Math.max(1, Math.ceil(filteredTabs.length / pageSize));
+  const visibleTabs = filteredTabs.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -29,25 +45,81 @@ function DashboardContent() {
         await restoreSession();
       }
       await init();
+      setSettings(await getSettings());
+      setWorkspaces(await getWorkspaces());
     };
     bootstrap();
   }, []);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      fullSync(user.id).then(() => init());
+      fullSync(user.id).then((result) => {
+        if (!result.success) setSyncMessage(result.error || 'Sync failed. Your local data is safe.');
+        else setSyncMessage('');
+        return init();
+      });
       setShowAuth(false);
     }
   }, [isAuthenticated]);
+  useEffect(() => {
+    // A selection belongs to the current result set. Keeping hidden selections
+    // after filtering makes bulk actions and exports unexpectedly affect tabs
+    // the user can no longer see.
+    setPage(1);
+    setSelected(new Set());
+  }, [searchQuery, activeTag]);
+  useEffect(() => setPage(current => Math.min(current, pageCount)), [pageCount]);
+  useEffect(() => {
+    const validIds = new Set(tabs.map(tab => tab.id));
+    setSelected(current => new Set([...current].filter(id => validIds.has(id))));
+  }, [tabs]);
 
   const handleRefresh = async () => {
     if (isAuthenticated && user) {
-      await fullSync(user.id);
+      const result = await fullSync(user.id);
+      setSyncMessage(result.success ? 'Synced successfully.' : (result.error || 'Sync failed. Your local data is safe.'));
     }
     await init();
   };
 
   const loading = tabsLoading || authLoading;
+
+  const toggleSelected = (id) => setSelected(current => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const exportData = async (csv = false, encrypted = false) => {
+    const rows = tabs.filter(t => selected.size === 0 || selected.has(t.id));
+    const backup = { version: 1, exportedAt: new Date().toISOString(), tabs: rows, reminders: useTabStore.getState().reminders };
+    if (encrypted) { const password = window.prompt('Choose a backup password (minimum 8 characters).'); if (!password) return; if (password.length < 8) { setSyncMessage('Encrypted backup passwords must be at least 8 characters.'); return; } const envelope = await encryptBackup(backup, password); const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mindtabs-encrypted-backup.json'; a.click(); URL.revokeObjectURL(a.href); return; }
+    if (!window.confirm(`This ${csv ? 'CSV export' : 'JSON export'} is not encrypted and contains your saved page history and reminders. Continue?`)) return;
+    const content = csv
+      ? ['title,url,tag,archived', ...rows.map(t => [t.title, t.url, t.tag || '', t.isArchived ? 'yes' : 'no'].map(escapeCsvCell).join(','))].join('\n')
+      : JSON.stringify(backup, null, 2);
+    const blob = new Blob([content], { type: csv ? 'text/csv' : 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `mindtabs-backup.${csv ? 'csv' : 'json'}`; a.click(); URL.revokeObjectURL(a.href);
+  };
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 10 * 1024 * 1024) { setSyncMessage('Backup is too large (maximum 10 MB).'); event.target.value = ''; return; } const reader = new FileReader(); reader.onload = async () => { try { const text = String(reader.result); let parsed = file.name.toLowerCase().endsWith('.csv') ? parseCsvBackup(text) : JSON.parse(text); if (parsed.format === 'mindtabs-encrypted-backup') { const password = window.prompt('Enter the backup password.'); if (!password) return; parsed = await decryptBackup(parsed, password); } setImportPreview(validateBackup(parsed)); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not preview backup.'); } }; reader.readAsText(file); event.target.value = ''; };
+  const confirmImport = async () => { if (!importPreview) return; setImporting(true); try { await useTabStore.getState().importData(importPreview, importMode); setImportPreview(null); setSyncMessage(`Backup ${importMode === 'replace' ? 'replaced' : 'merged'} successfully.`); } catch (e) { setSyncMessage(e instanceof Error ? e.message : 'Could not import backup.'); } finally { setImporting(false); } };
+  const updateSettings = async (next) => {
+    const previous = settings;
+    const merged = normalizeSettings({ ...previous, ...next });
+    setSettings(merged);
+    try {
+      await saveSettings(merged);
+      const browser = (globalThis as any).chrome;
+      if (browser?.alarms) {
+        if (next.syncIntervalMinutes) await browser.alarms.create('sync-alarm', { periodInMinutes: merged.syncIntervalMinutes });
+        if (next.retentionDays) await browser.alarms.create('weekly-cleanup', { periodInMinutes: 7 * 24 * 60 });
+      }
+      setSyncMessage('Settings saved.');
+    } catch (error) {
+      setSettings(previous);
+      setSyncMessage(error instanceof Error ? `Could not save settings: ${error.message}` : 'Could not save settings.');
+    }
+  };
+  const completeOnboarding = async (tracking) => { await updateSettings({ tracking, onboardingComplete: true }); };
+  const openSelected = () => tabs.filter(t => selected.has(t.id)).forEach(t => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: t.url }); else window.open(t.url, '_blank', 'noopener,noreferrer'); });
+  const bulkUpdateSelected = async (action: 'archive' | 'unarchive') => { if (!selected.size || bulkBusy) return; setBulkBusy(true); try { await useTabStore.getState().bulkUpdate([...selected], action); setSyncMessage(`${action === 'archive' ? 'Archived' : 'Unarchived'} ${selected.size} tabs.`); setSelected(new Set()); } catch (error) { setSyncMessage(error instanceof Error ? error.message : 'Bulk update failed.'); } finally { setBulkBusy(false); } };
+  const saveWorkspace = async () => { if (!selected.size) { setSyncMessage('Select tabs before saving a workspace.'); return; } const name = window.prompt('Workspace name'); if (name) { const workspace = await useTabStore.getState().saveWorkspace(name, [...selected]); setWorkspaces(current => [...current, workspace]); setSyncMessage(`Workspace “${workspace.name}” saved.`); } };
+  const restoreWorkspace = (workspace) => { const ids = new Set(workspace.tabIds); const existingTabs = tabs.filter(tab => ids.has(tab.id)); setSelected(new Set(existingTabs.map(tab => tab.id))); existingTabs.forEach(tab => { const browser = (globalThis as any).chrome; if (browser?.tabs) browser.tabs.create({ url: tab.url }); else window.open(tab.url, '_blank', 'noopener,noreferrer'); }); setSyncMessage(existingTabs.length ? `Opened workspace “${workspace.name}”.` : 'No tabs from this workspace are available.'); };
 
 
 
@@ -65,8 +137,12 @@ function DashboardContent() {
     );
   }
 
+  if (!settings.onboardingComplete) {
+    return <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6"><div className="glass rounded-2xl p-8 max-w-lg shadow-2xl"><p className="section-kicker mb-3">Welcome to MindTabs</p><h1 className="text-2xl font-bold mb-3">Save the reason behind your tabs.</h1><p className="text-sm text-muted-foreground leading-6 mb-4">MindTabs can save page titles and URLs locally and, when you sign in, sync that metadata to your Supabase account. You can pause tracking, block domains, export encrypted backups, or delete everything at any time.</p><p className="text-sm text-muted-foreground leading-6 mb-6">Do you want to enable automatic tab tracking?</p><div className="flex flex-wrap gap-3"><button type="button" className="btn-primary" onClick={() => completeOnboarding(true)}>Enable tracking</button><button type="button" className="btn-secondary" onClick={() => completeOnboarding(false)}>Keep tracking paused</button></div></div></div>;
+  }
+
   return (
-    <div className="min-h-screen bg-background text-foreground dark">
+    <div className={`min-h-screen bg-background text-foreground ${settings.theme === 'dark' ? 'dark' : 'theme-light'}`}>
       <Header onSignIn={() => navigate('/login')} />
 
       <main className="grow pb-16">
@@ -74,15 +150,41 @@ function DashboardContent() {
           <div className="max-w-7xl mx-auto px-6 pt-6">
             <div role="alert" className="flex items-center justify-between gap-4 rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
               <span>{actionError}</span>
-              <button onClick={clearActionError} className="rounded-lg px-2 py-1 text-amber-100 hover:bg-amber-400/10" aria-label="Dismiss message">Dismiss</button>
+              <button type="button" onClick={clearActionError} className="rounded-lg px-2 py-1 text-amber-100 hover:bg-amber-400/10" aria-label="Dismiss message">Dismiss</button>
             </div>
           </div>
         )}
+        {syncMessage && (
+          <div className="max-w-7xl mx-auto px-6 pt-3">
+            <div role="status" className="rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-200">{syncMessage}</div>
+          </div>
+        )}
+        {lastDeleted && <div className="max-w-7xl mx-auto px-6 pt-3"><div role="status" className="flex items-center justify-between rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-200"><span>“{lastDeleted.tab.title}” deleted.</span><button type="button" className="btn-secondary" onClick={undoLastDelete}>Undo</button></div></div>}
         <HeroDashboardWrapper 
           onRefresh={handleRefresh} 
           onClearAll={() => setShowDeleteAll(true)}
           tabsCount={tabs.length}
         >
+            <div className="flex flex-wrap items-center gap-2 mb-6">
+              <button type="button" className="btn-secondary" onClick={() => { const ids = visibleTabs.map(t => t.id); setSelected(new Set(ids)); }}><FolderOpen size={14} /> Select all on this page</button>
+              {selected.size > 0 && <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary-500/20 bg-primary-500/5 p-2"><span className="text-xs text-muted-foreground px-1">{selected.size} selected</span><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={openSelected}>Open selected</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={saveWorkspace}>Save workspace</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={() => bulkUpdateSelected('archive')}>{bulkBusy ? 'Updating…' : 'Archive selected'}</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={() => bulkUpdateSelected('unarchive')}>Unarchive selected</button><button type="button" className="btn-secondary" disabled={bulkBusy} onClick={() => setSelected(new Set())}>Clear selection</button></div>}
+              <button className="btn-secondary" onClick={() => exportData(false)}><Download size={14} /> Export JSON</button>
+              <button className="btn-secondary" onClick={() => exportData(false, true)}>Encrypted backup</button>
+              <button className="btn-secondary" onClick={() => exportData(true)}>Export CSV</button>
+              <label className="btn-secondary cursor-pointer"><Upload size={14} /> Import backup<input type="file" accept="application/json,.csv,text/csv" className="hidden" onChange={importData} /></label>
+              <button className="btn-secondary" onClick={() => setShowSettings(!showSettings)}><Settings size={14} /> Settings</button>
+              {workspaces.length > 0 && <select className="btn-secondary" aria-label="Open saved workspace" defaultValue="" onChange={e => { const workspace = workspaces.find(item => item.id === e.target.value); if (workspace) restoreWorkspace(workspace); e.target.value = ''; }}><option value="">Workspaces</option>{workspaces.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}</select>}
+            </div>
+            {showSettings && <div className="glass rounded-xl p-4 mb-6 grid gap-3 md:grid-cols-4 text-sm">
+              <label>Theme <select className="input-field ml-2" value={settings.theme} onChange={e => updateSettings({ theme: e.target.value })}><option value="dark">Dark</option><option value="light">Light</option></select></label>
+              <label><input type="checkbox" checked={settings.tracking} onChange={e => updateSettings({ tracking: e.target.checked })} /> Track tabs</label>
+              <label><input type="checkbox" checked={settings.notifications} onChange={e => updateSettings({ notifications: e.target.checked })} /> Notifications</label>
+              <label>Retention days <input className="input-field w-20 ml-2" type="number" min="7" value={settings.retentionDays} onChange={e => updateSettings({ retentionDays: Number(e.target.value) })} /></label>
+              <label>Sync minutes <input className="input-field w-20 ml-2" type="number" min="1" value={settings.syncIntervalMinutes} onChange={e => updateSettings({ syncIntervalMinutes: Number(e.target.value) })} /></label>
+              <label className="md:col-span-4">Never track domains <input className="input-field w-full mt-1" value={settings.blockedDomains.join(', ')} onChange={e => updateSettings({ blockedDomains: e.target.value.split(',').map(value => value.trim()).filter(Boolean) })} placeholder="bank.example, mail.example" /></label>
+            </div>}
+            {reminders.filter(r => r.status === 'pending').length > 0 && <div className="glass rounded-xl p-4 mb-6" aria-live="polite"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Bell size={15} /> Upcoming reminders</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status === 'pending').sort((a,b) => a.remindAt-b.remindAt).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between"><span className="truncate">{tab?.title || 'Saved page'}</span><span>{new Date(r.remindAt).toLocaleString()}</span></div>; })}</div></div>}
+            {reminders.some(r => r.status !== 'pending') && <div className="glass rounded-xl p-4 mb-6" aria-label="Reminder history"><h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Clock size={15} /> Reminder history</h3><div className="grid gap-2 md:grid-cols-2">{reminders.filter(r => r.status !== 'pending').sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 8).map(r => { const tab = tabs.find(t => t.id === r.tabId); return <div key={r.id} className="text-xs text-muted-foreground flex justify-between gap-3"><span className="truncate">{tab?.title || 'Saved page'}</span><span className="shrink-0">{r.status === 'completed' ? 'Completed' : 'Cancelled'} · {formatDate(r.updatedAt || r.remindAt)}</span></div>; })}</div></div>}
             <div className="mb-6">
               <StatsCards />
             </div>
@@ -113,10 +215,17 @@ function DashboardContent() {
                         </p>
                       </div>
                       <div className="space-y-3">
-                        {filteredTabs.map((tab, index) => (
-                            <TabCard key={tab.id} tab={tab} index={index} />
+                        {visibleTabs.map((tab, index) => (
+                            <div key={tab.id} className="flex gap-2 items-start"><input aria-label={`Select ${tab.title}`} type="checkbox" checked={selected.has(tab.id)} onChange={() => toggleSelected(tab.id)} className="mt-6" /><div className="flex-1"><TabCard tab={tab} index={index} /></div></div>
                         ))}
                       </div>
+                      {pageCount > 1 && (
+                        <div className="flex items-center justify-center gap-3 mt-6">
+                          <button type="button" className="btn-secondary" aria-label="Previous page" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</button>
+                          <span className="text-xs text-muted-foreground" aria-current="page">Page {page} of {pageCount}</span>
+                          <button type="button" className="btn-secondary" aria-label="Next page" disabled={page === pageCount} onClick={() => setPage(p => p + 1)}>Next</button>
+                        </div>
+                      )}
                   </>
                   )}
               </div>
@@ -128,17 +237,44 @@ function DashboardContent() {
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} MindTabs</p>
             <div className="flex gap-4">
-                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs", "_blank")} className="hover:text-foreground">GitHub</button>
-                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs/issues", "_blank")} className="hover:text-foreground">Support</button>
+                <a href="https://github.com/Sagar02k4/MindTabs" target="_blank" rel="noreferrer" className="hover:text-foreground">GitHub</a>
+                <a href="https://github.com/Sagar02k4/MindTabs/issues" target="_blank" rel="noreferrer" className="hover:text-foreground">Support</a>
             </div>
         </div>
       </footer>
 
+      {importPreview && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="import-preview-title">
+          <div className="absolute inset-0 bg-black/60" aria-hidden="true" onClick={() => !importing && setImportPreview(null)} />
+          <div className="relative glass rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <h2 id="import-preview-title" className="text-lg font-semibold">Preview backup import</h2>
+            <p className="text-sm text-muted-foreground mt-2">Validated {importPreview.tabs.length} tabs and {importPreview.reminders.length} reminders. Choose how to apply this backup.</p>
+            <div className="grid gap-2 mt-5">
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3 cursor-pointer">
+                <input type="radio" name="import-mode" checked={importMode === 'merge'} onChange={() => setImportMode('merge')} />
+                <span><strong>Merge</strong><br /><small className="text-muted-foreground">Keep existing data and deduplicate normalized URLs.</small></span>
+              </label>
+              <label className="flex items-start gap-3 rounded-xl border border-border p-3 cursor-pointer">
+                <input type="radio" name="import-mode" checked={importMode === 'replace'} onChange={() => setImportMode('replace')} />
+                <span><strong>Replace</strong><br /><small className="text-muted-foreground">Delete current tabs and reminders, then use this backup.</small></span>
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button type="button" className="btn-secondary" disabled={importing} onClick={() => setImportPreview(null)}>Cancel</button>
+              <button type="button" className="btn-primary" disabled={importing} onClick={confirmImport}>{importing ? 'Importing…' : 'Import backup'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DeleteConfirmModal
         isOpen={showDeleteAll}
         onClose={() => setShowDeleteAll(false)}
-        onConfirm={() => {
-          deleteAllData();
+        onConfirm={async () => {
+          const deleted = await deleteAllData();
+          if (!deleted) return;
+          setSelected(new Set());
+          setWorkspaces([]);
           setShowDeleteAll(false);
         }}
         title="Delete All Data"

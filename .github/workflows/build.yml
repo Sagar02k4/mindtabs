@@ -41,3 +41,23 @@ jobs:
       - name: Build ${{ matrix.name }}
         working-directory: ${{ matrix.working-directory }}
         run: npm run build
+
+      - name: Lint auth portal
+        if: matrix.name == 'WebAuthPortal'
+        run: npm run lint
+
+      - name: Audit auth portal production dependencies
+        if: matrix.name == 'WebAuthPortal'
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Dependency audit
+        if: matrix.name == 'Extension'
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Development dependency audit report
+        if: matrix.name == 'Extension'
+        run: npm audit --audit-level=high || true
+
+      - name: Test and type-check extension
+        if: matrix.name == 'Extension'
+        run: npm run test && npm run typecheck && npm run lint

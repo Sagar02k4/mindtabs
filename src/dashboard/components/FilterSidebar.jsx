@@ -1,5 +1,4 @@
-import React from 'react';
-import { Layers, BookOpen, Briefcase, ShoppingBag, FlaskConical, Tv, AlertTriangle, Tag, ArrowDownAZ, ArrowUpAZ, Clock, SortAsc, Archive } from 'lucide-react';
+import { Layers, BookOpen, Briefcase, ShoppingBag, FlaskConical, Tv, AlertTriangle, Tag, ArrowDownAZ, Clock, SortAsc, Archive } from 'lucide-react';
 import useTabStore from '../../store/tabStore';
 import { TAG_OPTIONS, SORT_OPTIONS } from '../../utils/constants';
 
@@ -17,7 +16,7 @@ export default function FilterSidebar() {
   const stats = getStats();
 
   return (
-    <div className="w-64 flex-shrink-0 space-y-6">
+    <div className="w-full lg:w-64 flex-shrink-0 space-y-6">
       {/* Tags Filter */}
       <div className="glass rounded-xl p-4">
         <h3 className="text-xs font-semibold text-surface-400 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -26,6 +25,8 @@ export default function FilterSidebar() {
         </h3>
         <div className="space-y-1">
           <button
+            type="button"
+            aria-pressed={activeTag === 'all'}
             onClick={() => setActiveTag('all')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm
                       transition-all duration-200
@@ -45,6 +46,8 @@ export default function FilterSidebar() {
             const count = stats.tagBreakdown[tag.id] || 0;
             return (
               <button
+                type="button"
+                aria-pressed={activeTag === tag.id}
                 key={tag.id}
                 onClick={() => setActiveTag(tag.id)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm
@@ -65,6 +68,8 @@ export default function FilterSidebar() {
           })}
 
           <button
+            type="button"
+            aria-pressed={activeTag === 'untagged'}
             onClick={() => setActiveTag('untagged')}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm
                       transition-all duration-200
@@ -81,6 +86,8 @@ export default function FilterSidebar() {
 
           <div className="pt-2 mt-2 border-t border-surface-700/50">
             <button
+              type="button"
+              aria-pressed={activeTag === 'archived'}
               onClick={() => setActiveTag('archived')}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm
                         transition-all duration-200
@@ -110,6 +117,8 @@ export default function FilterSidebar() {
             const Icon = icons[option.id] || SortAsc;
             return (
               <button
+                type="button"
+                aria-pressed={sortBy === option.id}
                 key={option.id}
                 onClick={() => setSortBy(option.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm

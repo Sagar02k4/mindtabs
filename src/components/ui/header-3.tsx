@@ -22,12 +22,18 @@ export function Header({ onSignIn }: { onSignIn?: () => void }) {
 	React.useEffect(() => {
 		if (open) {
 			document.body.style.overflow = 'hidden';
+			const onKeyDown = (event: KeyboardEvent) => {
+				if (event.key === 'Escape') setOpen(false);
+			};
+			document.addEventListener('keydown', onKeyDown);
+			return () => {
+				document.removeEventListener('keydown', onKeyDown);
+				document.body.style.overflow = '';
+			};
 		} else {
 			document.body.style.overflow = '';
 		}
-		return () => {
-			document.body.style.overflow = '';
-		};
+		return undefined;
 	}, [open]);
 
 	return (
@@ -39,23 +45,23 @@ export function Header({ onSignIn }: { onSignIn?: () => void }) {
 		>
 			<nav className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-6">
 				<div className="flex items-center gap-5">
-					<a href="#" className="flex flex-row items-center gap-2 hover:bg-accent rounded-md p-2">
+					<a href="/" aria-label="MindTabs home" className="flex flex-row items-center gap-2 hover:bg-accent rounded-md p-2">
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-cyan flex items-center justify-center shadow-lg shadow-primary-500/25">
                           <Sparkles size={16} className="text-white" />
                         </div>
-                        <span className="font-bold text-lg gradient-text">MindTabs</span>
+                        <span className="font-bold text-lg text-primary-300">MindTabs</span>
 					</a>
 					<NavigationMenu className="hidden md:flex ml-4">
 						<NavigationMenuList>
 							<NavigationMenuItem>
-                                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs", "_blank")} className="flex items-center gap-2 px-4 py-2 hover:bg-accent rounded-md text-sm font-medium">
+								<a href="https://github.com/Sagar02k4/MindTabs" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:bg-accent rounded-md text-sm font-medium">
                                     <Github size={16} /> GitHub
-                                </button>
+								</a>
 							</NavigationMenuItem>
                             <NavigationMenuItem>
-                                <button onClick={() => window.open("https://github.com/Sagar02k4/MindTabs/issues", "_blank")} className="flex items-center gap-2 px-4 py-2 hover:bg-accent rounded-md text-sm font-medium">
+								<a href="https://github.com/Sagar02k4/MindTabs/issues" target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:bg-accent rounded-md text-sm font-medium">
                                     <LifeBuoy size={16} /> Support
-                                </button>
+								</a>
                             </NavigationMenuItem>
 						</NavigationMenuList>
 					</NavigationMenu>
@@ -82,10 +88,10 @@ export function Header({ onSignIn }: { onSignIn?: () => void }) {
 			<MobileMenu open={open} className="flex flex-col justify-between gap-2 overflow-y-auto">
 				<NavigationMenu className="max-w-full">
 					<div className="flex w-full flex-col gap-y-2 pb-4">
-                        <a href="https://github.com/Sagar02k4/MindTabs" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent">
+                        <a href="https://github.com/Sagar02k4/MindTabs" target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setOpen(false)}>
                             <Github size={18} /> GitHub
                         </a>
-                        <a href="#" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent">
+                        <a href="https://github.com/Sagar02k4/MindTabs/issues" target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded-md hover:bg-accent" onClick={() => setOpen(false)}>
                             <LifeBuoy size={18} /> Support
                         </a>
 					</div>

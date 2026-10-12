@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Sparkles, Loader2, Chrome } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -330,6 +329,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 text-foreground font-sans z-50 bg-background relative">
       <button
+        type="button"
         onClick={() => navigate('/')}
         className="absolute top-6 right-6 z-[100] btn-ghost text-sm bg-background/50 backdrop-blur-md border border-border/50 hover:bg-accent rounded-md px-3 py-1.5 hidden lg:block"
       >
@@ -513,6 +513,7 @@ export default function AuthPage() {
 
           <div className="text-center mb-10 relative">
             <button
+               type="button"
                onClick={() => navigate('/')}
                className="absolute -top-12 left-0 lg:hidden text-sm flex items-center text-muted-foreground hover:text-foreground"
             >
@@ -534,7 +535,7 @@ export default function AuthPage() {
                 type="email"
                 placeholder="developer@example.com"
                 value={email}
-                autoComplete="off"
+                autoComplete={mode === 'reset' ? 'username' : 'email'}
                 onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(false)}
@@ -551,6 +552,7 @@ export default function AuthPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -560,6 +562,8 @@ export default function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {showPassword ? (
@@ -575,15 +579,6 @@ export default function AuthPage() {
             <div className="flex items-center justify-between">
               {mode === 'login' && (
                 <>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="remember" />
-                    <Label
-                      htmlFor="remember"
-                      className="text-sm font-normal cursor-pointer text-muted-foreground"
-                    >
-                      Remember for 30 days
-                    </Label>
-                  </div>
                   <button 
                     type="button" 
                     onClick={() => toggleMode('reset')}
@@ -596,12 +591,12 @@ export default function AuthPage() {
             </div>
 
             {authError && (
-              <div className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div role="alert" aria-live="assertive" className="p-3 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg">
                 {authError}
               </div>
             )}
             {confirmMessage && (
-              <div className="p-3 text-sm text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <div role="status" aria-live="polite" className="p-3 text-sm text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                 {confirmMessage}
               </div>
             )}
@@ -611,6 +606,7 @@ export default function AuthPage() {
               className="w-full h-12 text-base font-medium" 
               size="lg" 
               disabled={isLoading || !email || (mode !== 'reset' && !password)}
+              aria-busy={isLoading}
             >
               {isLoading ? <Loader2 className="animate-spin mr-2" /> : null}
               {mode === 'login' ? "Log In" : mode === 'signup' ? "Sign Up" : "Send Reset Link"}
@@ -639,7 +635,7 @@ export default function AuthPage() {
 
           <div className="text-center text-sm text-muted-foreground mt-8">
             {mode === 'login' ? "Don't have an account? " : mode === 'signup' ? "Already registered? " : "Remember your password? "}
-            <button onClick={() => toggleMode(mode === 'login' ? 'signup' : 'login')} className="text-primary font-medium hover:underline">
+            <button type="button" onClick={() => toggleMode(mode === 'login' ? 'signup' : 'login')} className="text-primary font-medium hover:underline">
               {mode === 'login' ? "Sign Up now!" : "Log In"}
             </button>
           </div>
