@@ -8,6 +8,7 @@ export { mergeLists, mergeTabs } from './merge';
 
 const LAST_SYNC_KEY = 'mindtabs_last_sync';
 const SYNC_STATUS_KEY = 'mindtabs_sync_status';
+const SYNC_INITIALIZED_KEY = 'mindtabs_sync_initialized';
 const SYNC_LOCK_KEY = 'mindtabs_sync_lock';
 const CLOUD_PAGE_SIZE = 500;
 const CLOUD_MAX_ROWS = 10000;
@@ -75,6 +76,7 @@ export async function pushToCloud(userId) {
 
   try {
     const [tabs, reminders, deletedTabs] = await Promise.all([getAllTabs(), getAllReminders(), getDeletedTabs()]);
+    const syncInitialized = await getFromStorage(SYNC_INITIALIZED_KEY);
 
     // Upsert tabs
     if (tabs.length > 0 || deletedTabs.length > 0) {
@@ -120,11 +122,12 @@ export async function pushToCloud(userId) {
       if (remError) throw remError;
     }
 
-    // Delete cloud tabs that no longer exist locally
+    // Never delete cloud data during the first sync. A new or partially restored
+    // device must first establish a complete merged baseline.
     const localTabIds = tabs.map(t => t.id);
     const cloudTabs = await fetchAllUserRows('tabs', userId);
 
-    if (cloudTabs) {
+    if (syncInitialized && cloudTabs) {
       const toDelete = cloudTabs
         .filter(ct => !localTabIds.includes(ct.id) && !deletedTabs.some(dt => dt.id === ct.id))
         .map(ct => ct.id);
@@ -141,12 +144,13 @@ export async function pushToCloud(userId) {
     const remindersToDelete = (cloudReminders || [])
       .filter(cr => !localReminderIds.includes(cr.id))
       .map(cr => cr.id);
-    if (remindersToDelete.length > 0) {
+    if (syncInitialized && remindersToDelete.length > 0) {
       const { error } = await supabase.from('reminders').delete().eq('user_id', userId).in('id', remindersToDelete);
       if (error) throw error;
     }
 
     await setToStorage(LAST_SYNC_KEY, Date.now());
+    await setToStorage(SYNC_INITIALIZED_KEY, true);
     return { success: true };
   } catch (err) {
     console.error('Push to cloud failed:', err);
