@@ -47,6 +47,7 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
       
       <div role="dialog" aria-modal="true" aria-labelledby="reminder-dialog-title" className="relative glass rounded-2xl p-6 max-w-sm w-full animate-scale-in shadow-2xl shadow-black/50">
         <button
+          type="button"
           ref={closeButtonRef}
           aria-label="Close reminder dialog"
           onClick={onClose}
@@ -70,6 +71,7 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
         <div className="space-y-2 mb-4">
           {REMINDER_PRESETS.filter(p => p.id !== 'custom').map((preset) => (
             <button
+              type="button"
               key={preset.id}
               onClick={() => handleSetReminder(preset)}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
