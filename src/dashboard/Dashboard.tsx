@@ -89,6 +89,7 @@ function DashboardContent() {
     const rows = tabs.filter(t => selected.size === 0 || selected.has(t.id));
     const backup = { version: 1, exportedAt: new Date().toISOString(), tabs: rows, reminders: useTabStore.getState().reminders };
     if (encrypted) { const password = window.prompt('Choose a backup password (minimum 8 characters).'); if (!password) return; if (password.length < 8) { setSyncMessage('Encrypted backup passwords must be at least 8 characters.'); return; } const envelope = await encryptBackup(backup, password); const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'mindtabs-encrypted-backup.json'; a.click(); URL.revokeObjectURL(a.href); return; }
+    if (!window.confirm(`This ${csv ? 'CSV export' : 'JSON export'} is not encrypted and contains your saved page history and reminders. Continue?`)) return;
     const content = csv
       ? ['title,url,tag,archived', ...rows.map(t => [t.title, t.url, t.tag || '', t.isArchived ? 'yes' : 'no'].map(escapeCsvCell).join(','))].join('\n')
       : JSON.stringify(backup, null, 2);
