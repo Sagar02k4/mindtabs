@@ -49,6 +49,10 @@ export function extractDomain(url) {
 export function normalizeUrl(url) {
   try {
     const u = new URL(url);
+    if (!isSafePageUrl(u.toString())) return url;
+    u.protocol = u.protocol.toLowerCase();
+    u.hostname = u.hostname.toLowerCase().replace(/^www\./, '');
+    if ((u.protocol === 'http:' && u.port === '80') || (u.protocol === 'https:' && u.port === '443')) u.port = '';
     u.username = '';
     u.password = '';
     u.hash = '';
@@ -56,6 +60,7 @@ export function normalizeUrl(url) {
     [...u.searchParams.keys()].forEach((key) => {
       if (removable.test(key)) u.searchParams.delete(key);
     });
+    u.searchParams.sort();
     if (u.pathname.length > 1) u.pathname = u.pathname.replace(/\/+$/, '');
     return u.toString();
   } catch {
@@ -194,11 +199,10 @@ export function escapeCsvCell(value) {
 export function getFaviconUrl(url) {
   try {
     if (!isSafePageUrl(url)) return null;
-    // Keep missing-favicon rendering local; sending hostnames to a third-party
-    // favicon proxy would disclose the user's browsing metadata.
-    return typeof chrome !== 'undefined' && chrome.runtime?.getURL
-      ? chrome.runtime.getURL('icons/icon16.png')
-      : '/icons/icon16.png';
+    // Ask the site itself for its favicon. Never substitute the MindTabs logo:
+    // a missing site icon should render as a neutral placeholder instead.
+    const origin = new URL(url).origin;
+    return `${origin}/favicon.ico`;
   } catch {
     return null;
   }

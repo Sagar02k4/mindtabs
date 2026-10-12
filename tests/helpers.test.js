@@ -10,7 +10,7 @@ import { isMatchingOAuthCallback } from '../src/utils/authSecurity.js';
 test('normalizeUrl groups tracking variants of one page', () => {
   assert.equal(
     normalizeUrl('https://www.example.com/article/?utm_source=newsletter&fbclid=abc#comments'),
-    'https://www.example.com/article'
+    'https://example.com/article'
   );
 });
 
@@ -18,6 +18,13 @@ test('normalizeUrl preserves meaningful query parameters', () => {
   assert.equal(
     normalizeUrl('https://example.com/search?q=mindtabs&utm_medium=email'),
     'https://example.com/search?q=mindtabs'
+  );
+});
+
+test('normalizeUrl canonicalizes host, default port, parameter order, and trailing slash', () => {
+  assert.equal(
+    normalizeUrl('HTTPS://WWW.Example.com:443/path/?z=2&a=1'),
+    'https://example.com/path?a=1&z=2',
   );
 });
 
@@ -42,8 +49,8 @@ test('safe page validation rejects executable URL schemes', () => {
   assert.equal(isSafePageUrl('https://example.com/page'), true);
 });
 
-test('favicon fallback does not disclose the tracked hostname', () => {
-  assert.equal(getFaviconUrl('https://private.example/account'), '/icons/icon16.png');
+test('favicon lookup stays on the tracked site and rejects unsafe URLs', () => {
+  assert.equal(getFaviconUrl('https://private.example/account'), 'https://private.example/favicon.ico');
   assert.equal(getFaviconUrl('javascript:alert(1)'), null);
 });
 
