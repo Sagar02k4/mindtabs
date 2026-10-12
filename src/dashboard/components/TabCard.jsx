@@ -1,13 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ExternalLink, Trash2, Bell, Tag, Clock, MoreVertical, X, FolderInput, Archive, XCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Trash2, Bell, Clock, X, Archive, XCircle } from 'lucide-react';
 import useTabStore from '../../store/tabStore';
 import TagBadge from '../../components/TagBadge';
-import { TAG_OPTIONS, REMINDER_PRESETS } from '../../utils/constants';
+import { REMINDER_PRESETS } from '../../utils/constants';
 import { extractDomain, timeAgo, getFaviconUrl, formatDate } from '../../utils/helpers';
 
 export default function TabCard({ tab, index }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const [showActions, setShowActions] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
@@ -46,11 +45,6 @@ export default function TabCard({ tab, index }) {
     }
   };
 
-  const handleTagSelect = async (tagId) => {
-    await updateTag(tab.id, tagId === tab.tag ? null : tagId);
-    setShowTagPicker(false);
-  };
-
   const handleSetReminder = async (preset) => {
     if (preset.id === 'custom') return;
     await (reminder ? resetReminder(tab.id, preset.getTime(), repeat || null) : setReminder(tab.id, preset.getTime(), repeat || null));
@@ -78,7 +72,7 @@ export default function TabCard({ tab, index }) {
             src={tab.favicon || getFaviconUrl(tab.url)}
             alt=""
             className="w-6 h-6 rounded"
-            onError={(e) => {
+            onError={() => {
               setImageFailed(true);
             }}
           />}

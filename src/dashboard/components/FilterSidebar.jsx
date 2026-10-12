@@ -1,5 +1,4 @@
-import React from 'react';
-import { Layers, BookOpen, Briefcase, ShoppingBag, FlaskConical, Tv, AlertTriangle, Tag, ArrowDownAZ, ArrowUpAZ, Clock, SortAsc, Archive } from 'lucide-react';
+import { Layers, BookOpen, Briefcase, ShoppingBag, FlaskConical, Tv, AlertTriangle, Tag, ArrowDownAZ, Clock, SortAsc, Archive } from 'lucide-react';
 import useTabStore from '../../store/tabStore';
 import { TAG_OPTIONS, SORT_OPTIONS } from '../../utils/constants';
 

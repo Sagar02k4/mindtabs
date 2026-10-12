@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, Clock, X } from 'lucide-react';
 import Button from '../../components/Button';
 import { REMINDER_PRESETS } from '../../utils/constants';
@@ -6,7 +6,6 @@ import useTabStore from '../../store/tabStore';
 
 export default function ReminderModal({ isOpen, onClose, tab }) {
   const [customDateTime, setCustomDateTime] = useState('');
-  const [selectedPreset, setSelectedPreset] = useState(null);
   const { setReminder } = useTabStore();
 
   const closeButtonRef = useRef(null);
@@ -22,7 +21,6 @@ export default function ReminderModal({ isOpen, onClose, tab }) {
 
   const handleSetReminder = async (preset) => {
     if (preset.id === 'custom') {
-      setSelectedPreset('custom');
       return;
     }
     await setReminder(tab.id, preset.getTime());

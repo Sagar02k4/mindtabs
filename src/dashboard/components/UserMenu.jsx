@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { User, LogOut, RefreshCw, Cloud, CloudOff, Trash2, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { LogOut, RefreshCw, Cloud, CloudOff, ChevronDown } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { fullSync, getLastSyncTime } from '../../utils/syncService';
 import { timeAgo } from '../../utils/helpers';

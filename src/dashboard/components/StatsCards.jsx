@@ -1,4 +1,3 @@
-import React from 'react';
 import { Layers, CalendarPlus, Bell, TrendingUp, Globe2 } from 'lucide-react';
 import useTabStore from '../../store/tabStore';
 

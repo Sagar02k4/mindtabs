@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { 
-  BookmarkPlus, Tag, Clock, LayoutDashboard, Trash2, AlertCircle,
-  ExternalLink, Bell, Check, Sparkles, ChevronDown, Cloud, User 
+  BookmarkPlus, Tag, LayoutDashboard, Trash2, AlertCircle,
+  ExternalLink, Bell, Check, Sparkles, ChevronDown, Cloud
 } from 'lucide-react';
 import useTabStore from '../store/tabStore';
 import useAuthStore from '../store/authStore';
@@ -20,7 +20,7 @@ export default function Popup() {
   const [recentTabs, setRecentTabs] = useState([]);
   const [trackingEnabled, setTrackingEnabled] = useState(false);
   const menuRootRef = useRef(null);
-  const { tabs, reminders, init, addTab, updateTag, setReminder, removeTab, getStats, actionError, clearActionError } = useTabStore();
+  const { tabs, init, addTab, updateTag, setReminder, removeTab, getStats, actionError, clearActionError } = useTabStore();
 
   const { isAuthenticated, user, restoreSession } = useAuthStore();
 
@@ -41,7 +41,7 @@ export default function Popup() {
         }
       });
     }
-  }, []);
+  }, [init, restoreSession]);
 
   useEffect(() => {
     // Show 5 most recent tabs

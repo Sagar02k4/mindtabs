@@ -10,7 +10,7 @@ const AUTH_CONFIRMATION_URL = AUTH_PORTAL_BASE_URL ? `${AUTH_PORTAL_BASE_URL}/` 
 const AUTH_RESET_URL = AUTH_PORTAL_BASE_URL ? `${AUTH_PORTAL_BASE_URL}/reset-password` : '';
 let authSubscription = null;
 
-const useAuthStore = create((set, get) => ({
+const useAuthStore = create((set, _get) => ({
   user: null,
   session: null,
   loading: true,

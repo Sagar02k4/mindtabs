@@ -216,7 +216,7 @@ export async function fullSync(userId) {
 
   const run = async () => {
     try {
-      const pullResult = await withRetry(async () => {
+      await withRetry(async () => {
         const result = await pullFromCloud(userId);
         if (!result.success) throw new Error(result.error || 'Cloud pull failed.');
         return result;
