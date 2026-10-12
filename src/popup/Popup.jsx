@@ -10,6 +10,7 @@ import TagBadge from '../components/TagBadge';
 import Button from '../components/Button';
 import { TAG_OPTIONS, REMINDER_PRESETS } from '../utils/constants';
 import { extractDomain, timeAgo, getFaviconUrl } from '../utils/helpers';
+import { getSettings, saveSettings } from '../utils/storage';
 
 export default function Popup() {
   const [currentTab, setCurrentTab] = useState(null);
@@ -17,6 +18,7 @@ export default function Popup() {
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const [customDateTime, setCustomDateTime] = useState('');
   const [recentTabs, setRecentTabs] = useState([]);
+  const [trackingEnabled, setTrackingEnabled] = useState(false);
   const menuRootRef = useRef(null);
   const { tabs, reminders, init, addTab, updateTag, setReminder, removeTab, getStats, actionError, clearActionError } = useTabStore();
 
@@ -28,6 +30,7 @@ export default function Popup() {
         await restoreSession();
       }
       await init();
+      setTrackingEnabled((await getSettings()).tracking);
     };
     bootstrap();
     // Get the current active tab
@@ -121,6 +124,13 @@ export default function Popup() {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.openOptionsPage();
     }
+  };
+
+  const toggleTracking = async () => {
+    const next = !trackingEnabled;
+    const settings = await getSettings();
+    await saveSettings({ ...settings, tracking: next, onboardingComplete: true });
+    setTrackingEnabled(next);
   };
 
   return (
@@ -356,6 +366,14 @@ export default function Popup() {
 
       {/* Footer */}
       <div className="px-5 py-3 border-t border-surface-800/50">
+        <button
+          type="button"
+          onClick={toggleTracking}
+          aria-pressed={trackingEnabled}
+          className="w-full mb-2 rounded-lg border border-surface-700/60 px-3 py-2 text-xs text-surface-300 hover:bg-surface-800/50 transition-colors"
+        >
+          {trackingEnabled ? 'Pause tab tracking' : 'Resume tab tracking'}
+        </button>
         <Button 
           variant="primary" 
           className="w-full"
