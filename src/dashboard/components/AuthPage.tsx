@@ -329,6 +329,7 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 text-foreground font-sans z-50 bg-background relative">
       <button
+        type="button"
         onClick={() => navigate('/')}
         className="absolute top-6 right-6 z-[100] btn-ghost text-sm bg-background/50 backdrop-blur-md border border-border/50 hover:bg-accent rounded-md px-3 py-1.5 hidden lg:block"
       >
@@ -512,6 +513,7 @@ export default function AuthPage() {
 
           <div className="text-center mb-10 relative">
             <button
+               type="button"
                onClick={() => navigate('/')}
                className="absolute -top-12 left-0 lg:hidden text-sm flex items-center text-muted-foreground hover:text-foreground"
             >
@@ -633,7 +635,7 @@ export default function AuthPage() {
 
           <div className="text-center text-sm text-muted-foreground mt-8">
             {mode === 'login' ? "Don't have an account? " : mode === 'signup' ? "Already registered? " : "Remember your password? "}
-            <button onClick={() => toggleMode(mode === 'login' ? 'signup' : 'login')} className="text-primary font-medium hover:underline">
+            <button type="button" onClick={() => toggleMode(mode === 'login' ? 'signup' : 'login')} className="text-primary font-medium hover:underline">
               {mode === 'login' ? "Sign Up now!" : "Log In"}
             </button>
           </div>
