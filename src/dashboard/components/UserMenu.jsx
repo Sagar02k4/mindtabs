@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { LogOut, RefreshCw, Cloud, CloudOff, ChevronDown } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
-import { fullSync, getLastSyncTime } from '../../utils/syncService';
+import { fullSync, getLastSyncTime, getSyncStatus } from '../../utils/syncService';
 import { timeAgo } from '../../utils/helpers';
 
 export default function UserMenu() {
@@ -11,11 +11,12 @@ export default function UserMenu() {
   const [syncStatus, setSyncStatus] = useState('idle');
   const [lastSync, setLastSync] = useState(null);
   const [syncMessage, setSyncMessage] = useState('');
+  const [persistedSync, setPersistedSync] = useState({ status: 'idle', error: null });
   const menuRef = useRef(null);
 
   useEffect(() => {
     // Load last sync time
-    getLastSyncTime().then(setLastSync);
+    Promise.all([getLastSyncTime(), getSyncStatus()]).then(([time, status]) => { setLastSync(time); setPersistedSync(status); });
   }, [syncing]);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function UserMenu() {
     try {
       const result = await fullSync(user.id);
       setSyncStatus(result.success ? 'success' : 'error');
+      setPersistedSync(result.success ? { status: 'success', error: null } : { status: 'error', error: result.error });
       setSyncMessage(result.success ? 'Sync completed.' : (result.error || 'Sync failed. Local data is safe.'));
     } catch (error) {
       setSyncStatus('error');
@@ -107,7 +109,12 @@ export default function UserMenu() {
           <div className="px-3 py-2 mb-1 border-b border-surface-700/50">
             <p className="text-sm font-medium text-surface-200 truncate">{userEmail}</p>
             <div className="flex items-center gap-1.5 mt-1">
-              {lastSync ? (
+              {persistedSync.status === 'error' ? (
+                <>
+                  <CloudOff size={10} className="text-amber-400" />
+                  <span className="text-[10px] text-amber-300" title={persistedSync.error || undefined}>Last sync failed</span>
+                </>
+              ) : lastSync ? (
                 <>
                   <Cloud size={10} className="text-emerald-400" />
                   <span className="text-[10px] text-surface-400">Synced {timeAgo(lastSync)}</span>

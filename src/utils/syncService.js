@@ -7,6 +7,7 @@ import { filterRemindersForTabs } from './reminders';
 export { mergeLists, mergeTabs } from './merge';
 
 const LAST_SYNC_KEY = 'mindtabs_last_sync';
+const SYNC_STATUS_KEY = 'mindtabs_sync_status';
 const SYNC_LOCK_KEY = 'mindtabs_sync_lock';
 const CLOUD_PAGE_SIZE = 500;
 const CLOUD_MAX_ROWS = 10000;
@@ -215,19 +216,25 @@ export async function fullSync(userId) {
   if (!isSupabaseConfigured() || !userId) return { success: false, error: 'Cloud sync is not configured or you are signed out.' };
 
   const run = async () => {
+    const lastSyncAttempt = Date.now();
+    await setToStorage(SYNC_STATUS_KEY, { status: 'running', lastSyncAttempt, error: null });
     try {
       await withRetry(async () => {
         const result = await pullFromCloud(userId);
         if (!result.success) throw new Error(result.error || 'Cloud pull failed.');
         return result;
       });
-      return withRetry(async () => {
+      const result = await withRetry(async () => {
         const result = await pushToCloud(userId);
         if (!result.success) throw new Error(result.error || 'Cloud push failed.');
         return result;
       });
+      await setToStorage(SYNC_STATUS_KEY, { status: 'success', lastSyncAttempt, lastSyncSuccess: Date.now(), error: null });
+      return result;
     } catch (error) {
-      return { success: false, error: error.message || 'Cloud sync failed.' };
+      const message = error.message || 'Cloud sync failed.';
+      await setToStorage(SYNC_STATUS_KEY, { status: 'error', lastSyncAttempt, error: message });
+      return { success: false, error: message };
     }
   };
   const result = syncQueue.then(() => withSyncLock(run), () => withSyncLock(run));
@@ -240,6 +247,10 @@ export async function fullSync(userId) {
  */
 export async function getLastSyncTime() {
   return await getFromStorage(LAST_SYNC_KEY);
+}
+
+export async function getSyncStatus() {
+  return (await getFromStorage(SYNC_STATUS_KEY)) || { status: 'idle', lastSyncAttempt: null, error: null };
 }
 
 /**
