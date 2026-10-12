@@ -18,6 +18,7 @@ export default function SearchBar() {
       />
       {searchQuery && (
         <button
+          type="button"
           onClick={() => setSearchQuery('')}
           aria-label="Clear tab search"
           className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded
