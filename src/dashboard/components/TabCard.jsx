@@ -122,6 +122,7 @@ export default function TabCard({ tab, index }) {
         {/* Actions */}
         <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <button
+            type="button"
             onClick={() => toggleArchive(tab.id)}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-purple-400 transition-colors"
             title={tab.isArchived ? "Unarchive" : "Archive"}
@@ -130,6 +131,7 @@ export default function TabCard({ tab, index }) {
             <Archive size={14} />
           </button>
           <button
+            type="button"
             onClick={() => { setShowReminderPicker(!showReminderPicker); setShowTagPicker(false); }}
             className="p-2 rounded-lg hover:bg-surface-700/50 text-surface-400 hover:text-amber-400 transition-colors"
             title={reminder ? "Reset Reminder" : "Set Reminder"}
@@ -138,6 +140,7 @@ export default function TabCard({ tab, index }) {
             <Bell size={14} />
           </button>
           <button
+            type="button"
             onClick={handleCloseChromeTab}
             className="p-2 rounded-lg hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
             title="Close Tab in Browser"
@@ -146,6 +149,7 @@ export default function TabCard({ tab, index }) {
             <XCircle size={14} />
           </button>
           <button
+            type="button"
             onClick={() => setShowDeleteConfirm(true)}
             className="p-2 rounded-lg hover:bg-red-500/20 text-surface-400 hover:text-red-400 transition-colors"
             title="Delete from Dashboard"
@@ -162,7 +166,7 @@ export default function TabCard({ tab, index }) {
                       animate-scale-in shadow-xl shadow-black/40">
           <div className="flex items-center justify-between px-2 pb-1 mb-1 border-b border-surface-700/50">
             <span className="text-xs text-surface-400 font-medium">{reminder ? 'Reset Reminder' : 'Set Reminder'}</span>
-            <button onClick={() => setShowReminderPicker(false)} aria-label="Close reminder menu" className="text-surface-500 hover:text-surface-300">
+            <button type="button" onClick={() => setShowReminderPicker(false)} aria-label="Close reminder menu" className="text-surface-500 hover:text-surface-300">
               <X size={12} />
             </button>
           </div>
@@ -190,6 +194,7 @@ export default function TabCard({ tab, index }) {
               <option value="">No repeat</option><option value="daily">Repeat daily</option><option value="weekly">Repeat weekly</option>
             </select>
             <button
+              type="button"
               onClick={handleCustomReminder}
               disabled={!customDateTime}
               className="btn-primary w-full text-xs py-1.5"
@@ -206,8 +211,8 @@ export default function TabCard({ tab, index }) {
             <h3 id={`delete-tab-title-${tab.id}`} className="font-semibold text-surface-100">Delete this saved page?</h3>
             <p className="text-sm text-surface-400 mt-2">{reminder ? 'This tab has a reminder. Delete the tab and its reminder?' : 'This cannot be undone.'}</p>
             <div className="flex justify-end gap-2 mt-5">
-              <button ref={cancelDeleteRef} className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>No</button>
-              <button className="btn-danger" onClick={() => { removeTab(tab.id); setShowDeleteConfirm(false); }}>Yes, delete</button>
+              <button type="button" ref={cancelDeleteRef} className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>No</button>
+              <button type="button" className="btn-danger" onClick={() => { removeTab(tab.id); setShowDeleteConfirm(false); }}>Yes, delete</button>
             </div>
           </div>
         </div>
